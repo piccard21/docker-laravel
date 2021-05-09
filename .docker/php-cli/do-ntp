@@ -1,0 +1,2 @@
+#!/bin/sh
+sudo ntpd -d -q -n -p ntpd -d -q -n -p 2.de.pool.ntp.org

@@ -1,0 +1,86 @@
+version: '3.7'
+
+# Services
+services:
+
+  # Nginx Service
+  nginx:
+    build: ./.docker/nginx
+    ports:
+      - ${APP_PORT}:${APP_PORT}
+    volumes:
+      - ./:/var/www/php
+      - ./.docker/nginx/conf.d:/etc/nginx/templates
+      - phpmyadmindata:/var/www/phpmyadmin:ro
+    environment:
+      - NGINX_HOST=${APP_DOMAIN}
+      - NGINX_PORT=${APP_PORT}
+      - PMA_HOST=${PMA_DOMAIN}
+    depends_on:
+      - php
+      - phpmyadmin
+
+  # PHP Service
+  php:
+    build:
+      args:
+        user: piccard
+        uid: 1000
+      context: ./.docker/php
+      dockerfile: Dockerfile
+    working_dir: /var/www/php
+    volumes:
+      - ./:/var/www/php
+      - ./.docker/php/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
+      - ./.docker/php/conf.d/docker-xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    depends_on:
+      - db
+
+  php-cli:
+    build:
+      args:
+        user: piccard
+        uid: 1000
+      context: ./.docker/php-cli
+      dockerfile: Dockerfile
+    working_dir: /var/www/php
+    volumes:
+      - ./:/var/www/php
+      - ./.docker/php/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
+    depends_on:
+      - php
+
+  # MySQL Service
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ${TARGET_DB_PATH}:/var/lib/mysql:rw
+      - .docker/mysql:/docker-entrypoint-initdb.d
+
+  # PhpMyAdmin Service
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:5-fpm-alpine
+    environment:
+      PMA_HOST: db
+    volumes:
+      - phpmyadmindata:/var/www/html
+    depends_on:
+      - db
+
+  # Node
+  node:
+    image: node:latest
+    volumes:
+      - ./:/var/www/html:rw
+    working_dir: /var/www/html
+    user: node
+
+# Volumes
+volumes:
+  phpmyadmindata:

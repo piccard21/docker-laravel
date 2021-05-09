@@ -1,0 +1,35 @@
+server {
+  server_name _;
+  listen 80 default_server;
+  return 404;
+}
+
+server {
+    # this is the internal Docker DNS, cache only for 30s
+    #resolver 127.0.0.11 valid=30s;
+
+    listen      ${NGINX_PORT};
+    server_name ${NGINX_HOST};
+    root        /var/www/php/public;
+    index       index.html index.htm index.php;
+
+    access_log /var/log/nginx/${NGINX_HOST}.access.log;
+    error_log /var/log/nginx/${NGINX_HOST}.error.log;
+
+    location ~ [^/]\.php(/|$) {
+        client_max_body_size    20M;
+        fastcgi_read_timeout 3600;
+        fastcgi_split_path_info ^(.+?\.php)(.*)$;
+        fastcgi_pass   php:9000;
+        include        fastcgi_params;
+        fastcgi_param   PATH_INFO       $fastcgi_path_info;
+        fastcgi_param  SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param  SCRIPT_NAME     $fastcgi_script_name;
+        fastcgi_param  SERVER_NAME     $server_name;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+        gzip_static on;
+    }
+}
