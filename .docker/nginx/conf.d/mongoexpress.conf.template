@@ -1,0 +1,11 @@
+upstream mongoexpress {
+    server mongo-express:8081;
+  }
+
+server {
+    listen ${NGINX_PORT};
+    server_name ${MONGOEXPRESS_HOST};
+    location / {
+        proxy_pass http://mongoexpress;
+    }
+}

@@ -3,7 +3,7 @@ version: '3.7'
 # Services
 services:
 
-  # Nginx Service
+  # Nginx
   nginx:
     build: ./.docker/nginx
     ports:
@@ -16,11 +16,12 @@ services:
       - NGINX_HOST=${APP_DOMAIN}
       - NGINX_PORT=${APP_PORT}
       - PMA_HOST=${PMA_DOMAIN}
+      - MONGOEXPRESS_HOST=${MONGOEXPRESS_DOMAIN}
     depends_on:
       - php
       - phpmyadmin
 
-  # PHP Service
+  # PHP
   php:
     build:
       args:
@@ -36,6 +37,7 @@ services:
     depends_on:
       - db
 
+  # PHP-CLI for crons
   php-cli:
     build:
       args:
@@ -50,7 +52,7 @@ services:
     depends_on:
       - php
 
-  # MySQL Service
+  # MySQL
   db:
     image: mysql:5.7
     environment:
@@ -63,7 +65,7 @@ services:
       - ${TARGET_DB_PATH}:/var/lib/mysql:rw
       - .docker/mysql:/docker-entrypoint-initdb.d
 
-  # PhpMyAdmin Service
+  # PhpMyAdmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:5-fpm-alpine
     environment:
@@ -80,6 +82,31 @@ services:
       - ./:/var/www/html:rw
     working_dir: /var/www/html
     user: node
+
+  # Mongo
+  mongodb:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - ${TARGET_MONGODB_PATH}:/data/db
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: root
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: Startrek,21
+      ME_CONFIG_SITE_BASEURL: /
+    depends_on:
+      - mongodb
 
 # Volumes
 volumes:
