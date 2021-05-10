@@ -46,7 +46,9 @@ docker-compose run --rm node npm install bootstrap-vue
 ```
 
 
-## Laravel Cmds
+## Cmds
+
+### Laravel
 ```
 # create command 
 docker-compose exec php php artisan make:command CronTest
@@ -68,6 +70,15 @@ docker-compose exec php php artisan make:controller API/CategoryController --api
 
 # log into container 
 docker-compose exec db sh
+
+# add composer package
+docker-compose exec php composer require jenssegers/mongodb
+```
+
+### PHP
+```
+# List PHP modules
+docker-compose exec php php -m | grep mongo
 ```
 
 

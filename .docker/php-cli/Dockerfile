@@ -7,6 +7,7 @@ ARG uid
 RUN apk add --no-cache $PHPIZE_DEPS \
     && pecl install xdebug-2.9.7 \
     && pecl install trader-0.5.1 \
+    && pecl install mongodb \
     && docker-php-ext-enable xdebug \
     && apk add --update sudo \
     && apk add --no-cache zip libzip-dev libxslt-dev unzip \
