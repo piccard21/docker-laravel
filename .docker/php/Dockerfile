@@ -19,8 +19,7 @@ RUN apk add --no-cache $PHPIZE_DEPS \
     &&  docker-php-ext-configure intl \
     &&  docker-php-ext-configure gd --with-freetype --with-jpeg \
     &&  docker-php-ext-configure zip \
-    &&  docker-php-ext-install gd intl mysqli opcache soap zip xmlrpc xsl pdo pdo_mysql \
-    && pecl config-set php_ini /usr/local/etc/php/conf.d/php.ini
+    &&  docker-php-ext-install gd intl mysqli opcache soap zip xmlrpc xsl pdo pdo_mysql
 
 # Create system user to run Composer and Artisan Commands
 RUN addgroup --system --gid $uid $user \
