@@ -6,8 +6,10 @@ ARG uid
 
 RUN apk add --no-cache $PHPIZE_DEPS \
     && pecl install xdebug-2.9.7 \
-    && pecl install trader-0.5.1 \
+    && apk add --virtual build-dependencies build-base openssl-dev autoconf \
     && pecl install mongodb \
+    && docker-php-ext-enable mongodb \
+    && pecl install trader-0.5.1 \
     && docker-php-ext-enable xdebug \
     && apk add --no-cache zip libzip-dev libxslt-dev unzip \
     && apk add --no-cache freetype libpng libjpeg-turbo freetype-dev libpng-dev libjpeg-turbo-dev \
@@ -17,7 +19,8 @@ RUN apk add --no-cache $PHPIZE_DEPS \
     &&  docker-php-ext-configure intl \
     &&  docker-php-ext-configure gd --with-freetype --with-jpeg \
     &&  docker-php-ext-configure zip \
-    &&  docker-php-ext-install gd intl mysqli opcache soap zip xmlrpc xsl pdo pdo_mysql
+    &&  docker-php-ext-install gd intl mysqli opcache soap zip xmlrpc xsl pdo pdo_mysql \
+    && pecl config-set php_ini /usr/local/etc/php/conf.d/php.ini
 
 # Create system user to run Composer and Artisan Commands
 RUN addgroup --system --gid $uid $user \
