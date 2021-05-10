@@ -38,19 +38,19 @@ services:
       - db
 
   # PHP-CLI for crons
-#  php-cli:
-#    build:
-#      args:
-#        user: piccard
-#        uid: 1000
-#      context: ./.docker/php-cli
-#      dockerfile: Dockerfile
-#    working_dir: /var/www/php
-#    volumes:
-#      - ./:/var/www/php
-#      - ./.docker/php/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
-#    depends_on:
-#      - php
+  php-cli:
+    build:
+      args:
+        user: piccard
+        uid: 1000
+      context: ./.docker/php-cli
+      dockerfile: Dockerfile
+    working_dir: /var/www/php
+    volumes:
+      - ./:/var/www/php
+      - ./.docker/php/conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
+    depends_on:
+      - php
 
   # MySQL
   db:
