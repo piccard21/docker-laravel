@@ -24,6 +24,7 @@ class CreateJobsTable extends Migration
             $table->enum('status', ['WAITING', 'READY', 'ACTIVE', 'INACTIVE']);
             $table->enum('next', ['BUY', 'SELL']);
             $table->bigInteger('lastTimeTriggered')->unsigned();
+            $table->float('start_price', 20, 5)->unsigned();
             $table->bigInteger('user_id')->unsigned()->index();
             $table->timestamps();
             $table->foreign('user_id')->references('id')->on('users');

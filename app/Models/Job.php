@@ -34,9 +34,9 @@ class Job extends Model {
         return $this->belongsTo(User::class, 'id');
     }
 
-    //public function logs()
-    //{
-    //    return $this->hasMany(JobLog::class);
-    //}
+    public function logs()
+    {
+        return $this->hasMany(JobLog::class);
+    }
 
 }

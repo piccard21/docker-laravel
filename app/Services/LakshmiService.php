@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Symbol;
 use App\Models\Job;
+use App\Models\JobLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 class LakshmiService {
 
     protected $exchangeService;
+
+    protected $accountInfo;
 
     public function __construct() {
         $this->exchangeService = app(BinanceApiService::class);
@@ -114,6 +117,65 @@ class LakshmiService {
             ->first();
     }
 
+    public function getAvailableAsset($job) {
+        $available = [
+            "base" => 0,
+            "quote" => 0,
+        ];
+
+        // not active yet OR no logs
+        if (($job->status !== 'ACTIVE' && $job->status !== 'INACTIVE')  || !JobLog::count()) {
+            $available =  [
+                "base" => 0,
+                "quote" => $available[$job->start_price]
+            ];
+        }
+
+        /**
+         * TODO wir nehmen an, dass wir immer 100% kaufen/verkaufen
+         *
+         * - BUY:
+         *  "executedQty": "0.00718000",
+         *  "cummulativeQuoteQty": "24.98898480"
+         *
+         *  - base: executedQty
+         *  - quote: 0
+         *
+         * - SELL:
+         *  "executedQty": "0.00718000",
+         *  "cummulativeQuoteQty": "25.36212940"
+         *
+         * - base: 0
+         * - quote: cummulativeQuoteQty
+         */
+
+        // get last job_log
+        $lastJob = $job->logs()->orderBy('time', 'desc')->first();
+
+        // should be also valid for inactive jobs
+        if ($job->next === "BUY") {
+            $available =  [
+                "base" => 0,
+                "quote" => $lastJob->message["cummulativeQuoteQty"],
+            ];
+
+        } else if ($job->next === "SELL") {
+            $available =  [
+                "base" => $lastJob->message["executedQty"],
+                "quote" => 0
+            ];
+        }
+
+        return $available;
+    }
+
+    /**
+     * checks if startegy can be triggered now
+     *
+     * @param $job
+     * @return bool
+     * @throws \Exception
+     */
     private function canStrategyTriggeredNow($job) {
         Log::info("Checking if strategy can be triggered now...");
 
@@ -161,6 +223,7 @@ class LakshmiService {
         //    ]),
         //    "status" => "ACTIVE",
         //    "next" => "BUY",
+        //    "start_price" => 25,
         //    "lastTimeTriggered" => intval(Carbon::now()->getPreciseTimestamp(3)),
         //    "user_id" => 1
         //]);
@@ -174,6 +237,21 @@ class LakshmiService {
             if (!$this->canStrategyTriggeredNow($job)) {
                 continue;
             }
+
+            /**
+             * 2. canTradeBasic
+             * 3. canTrade
+             * 4. strategy
+             */
+            //$response = $this->canTrade($job->symbol, $job->next);
+
+            // get available base & quote
+            $assetAvailable = $this->getAvailableAsset($job);
+
+            return;
+
+            // are we still able to trade?
+            $this->canTrade();
 
             // get the right strategy
             $strategyService = app($job->strategy);
