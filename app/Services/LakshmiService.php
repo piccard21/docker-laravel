@@ -67,8 +67,8 @@ class LakshmiService {
             $lastEntry->delete();
         }
 
-        $startTimeFormatted = Carbon::createFromTimestamp(intval($startTime / 1000))->format('Y-m-d H:i:s e') ;
-        $startTimeTimestampMilliFormatted = intval($startTime / 1000) ;
+        $startTimeFormatted = Carbon::createFromTimestamp(intval($startTime / 1000))->format('Y-m-d H:i:s e');
+        $startTimeTimestampMilliFormatted = intval($startTime / 1000);
         Log::info("Starttime for update is $startTimeFormatted ($startTimeTimestampMilliFormatted)");
 
         $last = null;
@@ -77,9 +77,6 @@ class LakshmiService {
             $klinesNr = count($klines);
 
             if ($klinesNr) {
-                //foreach ($klines as &$kline) {
-                //    $kline["time"] = $kline["time"];
-                //}
                 $symbolModel->insert($klines);
             }
 
@@ -92,7 +89,7 @@ class LakshmiService {
             }
         } while ($klinesNr === 1000);
 
-        // rename time to time
+        // rename open_time to time
         DB::connection('mongodb')
             ->collection($symbol)
             ->where('symbol', $symbol)
@@ -102,6 +99,7 @@ class LakshmiService {
 
         Log::info("Updated historcial data of $symbol with timeframe $timeframe");
         Log::info("Last entry time: " . Carbon::createFromTimestamp(intval($last["open_time"] / 1000))->format('Y-m-d H:i:s e'));
-        Log::info("Last entry close_time: " . Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->format('Y-m-d H:i:s e'));
+        Log::info("Last entry close_time: " .
+            Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->format('Y-m-d H:i:s e'));
     }
 }

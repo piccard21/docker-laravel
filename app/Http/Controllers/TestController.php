@@ -19,8 +19,8 @@ class TestController extends Controller {
 
 
 
-        $symbol = "BTCUSDT";
-        $timeframe = "1d";
+        $symbol = "ETHUSDT";
+        $timeframe = "1h";
 
 
         Log::debug("before UPDATE " . Carbon::now()->format('Y-m-d H:i:s e'));
