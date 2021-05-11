@@ -179,6 +179,8 @@ return [
          * Custom Providers
          */
         Jenssegers\Mongodb\MongodbServiceProvider::class,
+        App\Providers\BinanceApiServiceProvider::class,
+        App\Providers\LakshmiServiceProvider::class,
 
     ],
 

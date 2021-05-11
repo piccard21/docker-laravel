@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\LakshmiService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Date;
@@ -10,21 +11,34 @@ use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\Test;
 use App\Models\Symbol;
+use App\Services\BinanceApiService;
+use Illuminate\Support\Facades\Log;
 
 class TestController extends Controller {
-    public function index() {
-
-        //$a = DB::connection('mongodb')->createCollection("whatever");
-
-        $symbol = Symbol::setCollection('snxusdt_4h');
+    public function index(LakshmiService $lakshmiService) {
 
 
-        $opens = $symbol->where([
-            'symbol' => "SNXUSDT",
-            'timeframe' => "4h",
-        ])
-            ->orderBy('open', 'desc')
-            ->get();
+
+        $symbol = "BTCUSDT";
+        $timeframe = "1d";
+
+
+        Log::debug("before UPDATE " . Carbon::now()->format('Y-m-d H:i:s e'));
+        $lakshmiService->updateSymbol($symbol, $timeframe);
+
+        Log::debug("after UPDATE " . Carbon::now()->format('Y-m-d H:i:s e'));
+        $klines = $lakshmiService->getSymbolHistory($symbol, $timeframe);
+        Log::debug("after getKlines " . Carbon::now()->format('Y-m-d H:i:s e'));
+
+
+
+        //$symbolModel = Symbol::setCollection('snxusdt_4h');
+        //$opens = $symbol->where([
+        //    'symbol' => "SNXUSDT",
+        //    'timeframe' => "4h",
+        //])
+        //    ->orderBy('open', 'desc')
+        //    ->get();
 
         //$toInsert=[];
         //foreach (range(0, 10000) as $i) {
@@ -39,7 +53,7 @@ class TestController extends Controller {
         //$students = Student::all();
 
         return view('test.test', [
-            "test" => $opens
+            "test" => $klines
         ]);
     }
 }
