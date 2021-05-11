@@ -28,6 +28,7 @@ Route::prefix('test')->group(function() {
     Route::get('/', [TestController::class, 'index'])->name('test');
     //Route::get('/buy', [TestController::class, 'buy'])->name('testbuy');
     //Route::get('/sell', [TestController::class, 'sell'])->name('testsell');
+    Route::get('/trade', [TestController::class, 'trade'])->name('trade');
 });
 
 Auth::routes();

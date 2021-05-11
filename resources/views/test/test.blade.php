@@ -1,5 +1,11 @@
-@extends('student.layouts.app')
+@extends('layouts.app')
 
 @section('content')
-{{dd($test)}}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col">
+                {{var_dump($test)}}
+            </div>
+        </div>
+    </div>
 @endsection

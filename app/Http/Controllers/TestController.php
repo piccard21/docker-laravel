@@ -29,4 +29,9 @@ class TestController extends Controller {
             "test" => $klines
         ]);
     }
+
+
+    public function trade(LakshmiService $lakshmiService) {
+        $lakshmiService->trade();
+    }
 }

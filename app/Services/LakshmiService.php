@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Symbol;
+use App\Models\Job;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -58,12 +59,7 @@ class LakshmiService {
         // get last entry of combination
         $symbolModel = Symbol::setCollection($symbol);
 
-        $lastEntry = $symbolModel->where([
-            "symbol" => $symbol,
-            "timeframe" => $timeframe
-        ])
-            ->orderBy('time', 'desc')
-            ->first();
+        $lastEntry = $this->getLastSymbolEntry($symbol, $timeframe);
 
         $startTime = null;
         if ($lastEntry) {
@@ -105,5 +101,89 @@ class LakshmiService {
         Log::info("Last entry time: " . Carbon::createFromTimestamp(intval($last["open_time"] / 1000))->format('Y-m-d H:i:s e'));
         Log::info("Last entry close_time: " .
             Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->format('Y-m-d H:i:s e'));
+    }
+
+    private function getLastSymbolEntry($symbol, $timeframe) {
+        $symbolModel = Symbol::setCollection($symbol);
+
+        return $symbolModel->where([
+            "symbol" => $symbol,
+            "timeframe" => $timeframe
+        ])
+            ->orderBy('time', 'desc')
+            ->first();
+    }
+
+    private function canStrategyTriggeredNow($job) {
+        Log::info("Checking if strategy can be triggered now...");
+
+        $symbolModel = Symbol::setCollection($job->symbol);
+
+        $entry = $symbolModel->where([
+            ['time', '<=', $job->lastTimeTriggered],
+            ['close_time', '>=', $job->lastTimeTriggered]
+        ])->first();
+
+        if (empty($entry)) {
+            // TODO .. .kann eigentlich nicht passieren
+            throw new \Exception("Cannot find symbol entry");
+        }
+        $closeTime = Carbon::createFromTimestamp($entry->close_time / 1000);
+        if ($closeTime->greaterThan(Carbon::now())) {
+            $lastEntryCloseTimeNice = Carbon::createFromTimestamp(intval($entry->close_time / 1000))
+                ->addSecond()
+                ->format('Y-m-d H:i:s');
+
+            Log::info("Too early for triggering strategy ...");
+            Log::info("Next candle will appear at $lastEntryCloseTimeNice");
+
+            return false;
+        }
+
+        return true;
+    }
+
+    public function trade() {
+
+        Log::info('===============================================================');
+        Log::info('Starting Lakshmi trading...');
+        Log::info('===============================================================');
+
+        //Job::insert([
+        //    "symbol" => "ETHUSDT",
+        //    "timeframe" => "4h",
+        //    "base" => "ETH",
+        //    "quote" => "USDT",
+        //    "strategy" => "App\Services\StrategyEmaCrossService",
+        //    "settings" => json_encode([
+        //        "ema1" => 2,
+        //        "ema2" => 3,
+        //    ]),
+        //    "status" => "ACTIVE",
+        //    "next" => "BUY",
+        //    "lastTimeTriggered" => intval(Carbon::now()->getPreciseTimestamp(3)),
+        //    "user_id" => 1
+        //]);
+
+        foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
+
+            // update symbols
+            $this->updateSymbolHistory($job->symbol, $job->timeframe);
+
+            // check if strategy can be triggered now
+            if (!$this->canStrategyTriggeredNow($job)) {
+                continue;
+            }
+
+            // get the right strategy
+            $strategyService = app($job->strategy);
+
+            // ok ... let's do it
+            $strategyService->strategy();
+
+            Log::info("Lakshmi successfully finished checking strategy for job $job->symbol $job->timeframe");
+        }
+
+        Log::info("Lakshmi has done with trading ;-)");
     }
 }
