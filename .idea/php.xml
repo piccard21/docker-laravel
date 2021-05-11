@@ -110,6 +110,7 @@
       <path value="$PROJECT_DIR$/vendor/jenssegers/mongodb" />
       <path value="$PROJECT_DIR$/vendor/mongodb/mongodb" />
       <path value="$PROJECT_DIR$/vendor/jean85/pretty-package-versions" />
+      <path value="$PROJECT_DIR$/vendor/laravel/ui" />
     </include_path>
   </component>
   <component name="PhpInterpreters">
