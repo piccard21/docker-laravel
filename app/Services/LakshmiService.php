@@ -27,7 +27,7 @@ class LakshmiService {
 
         $symbolModel = Symbol::setCollection($symbol);
 
-        return $symbolModel->select('time', 'open', 'close', 'high', 'low')
+        $result = $symbolModel->select('time', 'open', 'close', 'high', 'low')
             ->where('symbol', $symbol)
             ->where('timeframe', $timeframe)
             ->when($from, function($query, $from) {
@@ -39,6 +39,10 @@ class LakshmiService {
             ->orderBy('time', 'asc')
             ->get()
             ->toArray();
+
+        Log::debug("Successfully fetched symbol history of $symbol in timeframe $timeframe");
+
+        return $result;
     }
 
     /**
@@ -47,7 +51,7 @@ class LakshmiService {
      * @param $symbol
      * @param $timeframe
      */
-    public function updateSymbol($symbol, $timeframe) {
+    public function updateSymbolHistory($symbol, $timeframe) {
 
         Log::info("Going to update history of $symbol with timeframe of $timeframe");
 
