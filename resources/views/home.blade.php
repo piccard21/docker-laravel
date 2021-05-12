@@ -44,7 +44,7 @@
                                     <td>{{ $job["base"] }}</td>
                                     <td>{{ $job["quote"] }}</td>
                                     <td class="@if($job["roi"] >= 0) table-success @else table-danger @endif">{{ $job["roi"] }}%</td>
-                                    <td><a href="{{route('home')}}" class="btn btn-primary btn-sm active">info</a></td>
+                                    <td><a href="{{route('job-info', $job['id'])}}" class="btn btn-primary btn-sm active">info</a></td>
                                 </tr>
                             @endforeach
 

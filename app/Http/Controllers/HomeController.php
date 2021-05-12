@@ -60,4 +60,11 @@ class HomeController extends Controller {
             "testme" => "askldjaksd"
         ]);
     }
+
+
+    public function show(Request $request, int $id) {
+        return view('show', [
+            "logs" => Job::find($id)->logs()->get()->toArray()
+        ]);
+    }
 }
