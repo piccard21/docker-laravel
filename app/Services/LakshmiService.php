@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ExchangeInfo;
 use App\Models\Symbol;
 use App\Models\Job;
 use App\Models\JobLog;
@@ -219,7 +220,7 @@ class LakshmiService {
      */
     public function log($msg, $method, $type) {
 
-        if(!is_array($msg)) {
+        if (!is_array($msg)) {
             Log::info($msg);
         }
 
@@ -250,7 +251,7 @@ class LakshmiService {
 
         // not active yet OR no logs
         // TODO ... bottleneck ... beim Job anlegen sollte was eingetragen werden?
-        if (!JobLog::whereIn('method', ['BUY', 'SELL'])->count() ||
+        if (!JobLog::whereIn('method', ['BUY', 'SELL'])->where('type', 'SUCCESS')->count() ||
             ($this->job->status !== 'ACTIVE' && $this->job->status !== 'INACTIVE')) {
             $this->availableAsset = [
                 "base" => 0,
@@ -297,9 +298,31 @@ class LakshmiService {
         Log::info("- quote: " . $this->availableAsset["quote"] . "  " . $this->job->quote);
     }
 
+    /**
+     * updates the exchangeinfo
+     */
+    public function updateExchangeInfo() {
+        $exchangeInfo = $this->exchangeService->exchangeInfo();
+        $entryResult = ExchangeInfo::first();
+        if (!$entryResult) {
+            ExchangeInfo::create([
+                'info' => $exchangeInfo,
+            ]);
+        } else {
+            $entryResult->update(['info' => $exchangeInfo]);
+        }
+    }
+
+    /**
+     * prepares and orders exchangeinfos
+     */
     private function setExchangeInfos() {
         // all info
-        $this->exchangeInfo['all'] = $this->exchangeService->exchangeInfo();
+        if (!ExchangeInfo::first()) {
+            $this->updateExchangeInfo();
+        }
+
+        $this->exchangeInfo['all'] = ExchangeInfo::first()->info;
 
         // specific for the symbol
         foreach ($this->exchangeInfo['all']["symbols"] as $exSymbol) {
@@ -366,6 +389,7 @@ class LakshmiService {
         //    "lastTimeTriggered" => intval(Carbon::now()->getPreciseTimestamp(3)),
         //    "user_id" => 1
         //]);
+
 
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
             $this->job = $job;
