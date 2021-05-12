@@ -24,7 +24,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('lakshmi:updateExchangeInfo')->everyFourHours();
+        $schedule->command('lakshmi:updateExchangeInfo')->hourlyAt(21);
 
         // $schedule->command('inspire')->hourly();
         //$schedule->command('lakshmi:trade')->everyMinute();
