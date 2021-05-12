@@ -103,6 +103,9 @@ class StrategyEmaCrossService {
         }
     }
 
+    // TODO wie wäre es mit einem normalen return status und wir machen es wie BUY/SELL????
+    // andererseits so gehts natürlich auch
+    // was ist mit anderen Paketen ... etwas overflow?!?!?
     private function checkStatus() {
         Log::info("Job for " . $this->lakshmiService->job->symbol . " isn't ACTIVE");
         Log::info("Going to check if status can be changed");
