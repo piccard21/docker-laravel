@@ -590,4 +590,8 @@ class LakshmiService {
         Log::info("- open time: " . $openTimeFormatted . " (" . $last["open_time"] . ")");
         Log::info("- close time: " . $closeTimeFormatted . " (" . $last["close_time"] . ")");
     }
+
+    public function setJob (Job $job) {
+        $this->job = $job;
+    }
 }

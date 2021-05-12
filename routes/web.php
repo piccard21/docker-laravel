@@ -38,7 +38,7 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 
 // backtest
 Route::prefix('backtest')->group(function() {
-    Route::get('/', [BackTestController::class, 'index'])->name('backtest');
+    //Route::get('/', [BackTestController::class, 'index'])->name('backtest');
     //Route::post('/backtest', [BackTestController::class, 'backtest'])->name('backtest');
     //Route::get('/symbols', [BackTestController::class, 'symbols'])->name('symbols');
 });
