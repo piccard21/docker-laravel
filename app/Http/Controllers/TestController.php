@@ -21,12 +21,12 @@ class TestController extends Controller {
         $timeframe = "1h";
 
 
-        $lakshmiService->updateSymbolHistory($symbol, $timeframe);
-        $klines = $lakshmiService->getSymbolHistory($symbol, $timeframe);
+        //$lakshmiService->updateSymbolHistory($symbol, $timeframe);
+        //$klines = $lakshmiService->getSymbolHistory($symbol, $timeframe);
 
 
         return view('test.test', [
-            "test" => $klines
+            "test" => ""
         ]);
     }
 
