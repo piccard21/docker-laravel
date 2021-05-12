@@ -6,6 +6,7 @@ use App\Models\ExchangeInfo;
 use App\Models\Symbol;
 use App\Models\Job;
 use App\Models\JobLog;
+use App\Models\Credential;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -393,6 +394,13 @@ class LakshmiService {
 
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
             $this->job = $job;
+
+            // set right credentials
+            if (env('APP_ENV') === 'live') {
+                $credentials = Credential::where('user_id', $job->user_id)->first();
+                $this->exchangeService->setCredentials($credentials->toArray());
+            }
+
             try {
 
                 // update symbols

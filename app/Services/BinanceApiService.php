@@ -21,8 +21,6 @@ class BinanceApiService {
 
         if (env('APP_ENV') === 'live') {
             $this->url = $this->urlLive;
-            $this->key = env("BINANCE_API_KEY");
-            $this->secret = env("BINANCE_SECRET_KEY");
         } else {
             $this->url = rtrim(env("BINANCE_URL_TEST"), '/') . '/';
             $this->key = env("BINANCE_API_KEY_TEST");
@@ -292,5 +290,10 @@ class BinanceApiService {
 
     private function getTimestamp() {
         return round(microtime(true) * 1000);
+    }
+
+    public function setCredentials(array $credentials) {
+        $this->key = $credentials['key'];
+        $this->secret = $credentials['secret'];
     }
 }
