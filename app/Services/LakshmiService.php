@@ -173,13 +173,13 @@ class LakshmiService {
 
         // should be also valid for inactive jobs
         if ($job->next === "BUY") {
-            $this->availableAsset  = [
+            $this->availableAsset = [
                 "base" => 0,
                 "quote" => $lastJob->message["cummulativeQuoteQty"],
             ];
 
         } else if ($job->next === "SELL") {
-            $this->availableAsset  = [
+            $this->availableAsset = [
                 "base" => $lastJob->message["executedQty"],
                 "quote" => 0
             ];
@@ -230,7 +230,34 @@ class LakshmiService {
         return true;
     }
 
+    private function setExchangeInfos($symbol) {
+        // all info
+        $this->exchangeInfo['all'] = $this->exchangeService->exchangeInfo();
 
+        // specific for the symbol
+        foreach ($this->exchangeInfo['all']["symbols"] as $exSymbol) {
+            if ($exSymbol["symbol"] === $symbol) {
+                $this->exchangeInfo['symbolinfo'] = $exSymbol;
+                break;
+            }
+        }
+
+        // currencies
+        $this->exchangeInfo['currencies'] = [
+            "base" => $this->exchangeInfo['symbolinfo']['baseAsset'],
+            "quote" => $this->exchangeInfo['symbolinfo']['quoteAsset'],
+        ];
+
+        // filters
+        $this->exchangeInfo['filters'] = [];
+        foreach ($this->exchangeInfo['symbolinfo']['filters'] as $filter) {
+            $this->exchangeInfo['filters'][$filter['filterType']] = $filter;
+        }
+
+        // account info
+        $this->exchangeInfo['accountInfo'] = $this->exchangeService->accountInfo();
+
+    }
 
     /**
      * check basic binance rules if trading is possible
@@ -239,22 +266,12 @@ class LakshmiService {
      * @param string $symbol
      * @return MessageBag
      */
-    public function canTradeBasic(string $symbol, array $accountInfo) {
-        Log::info("Checking canTradeBasic() ...");
-        // CHECK BASIC PERMISSIONS
-        $exchangeInfoSymbol = null;
-
-        foreach ($this->exchangeInfo["symbols"] as $exSymbol) {
-            if ($exSymbol["symbol"] === $symbol) {
-                $exchangeInfoSymbol = $exSymbol;
-                break;
-            }
-        }
+    public function canTradeBasic() {
 
         // check exchangeInfo permissions/**1*/
-        $isSpotTradingAllowed = $exchangeInfoSymbol["isSpotTradingAllowed"];
-        $symbolHasMarket = in_array('MARKET', $exchangeInfoSymbol["orderTypes"]);
-        $symbolHasSpot = in_array('SPOT', $exchangeInfoSymbol["permissions"]);
+        $isSpotTradingAllowed = $this->exchangeInfo['symbolinfo']["isSpotTradingAllowed"];
+        $symbolHasMarket = in_array('MARKET', $this->exchangeInfo['symbolinfo']["orderTypes"]);
+        $symbolHasSpot = in_array('SPOT', $this->exchangeInfo['symbolinfo']["permissions"]);
 
         $errorBag = new MessageBag;
         if (!$isSpotTradingAllowed) {
@@ -266,25 +283,89 @@ class LakshmiService {
         if (!$symbolHasSpot) {
             $errorBag->add('exchange-info-spot-permissions', "No spot permissions");
         }
-        if (!$accountInfo["canTrade"]) {
+        if (!$this->exchangeInfo['accountInfo']["canTrade"]) {
             $errorBag->add('account-info-can-trade', "Account doesn't allow trading");
         }
-        if ($accountInfo["accountType"] !== "SPOT") {
+        if ($this->exchangeInfo['accountInfo']["accountType"] !== "SPOT") {
             $errorBag->add('account-info-account-type', "Account type isn't SPOT");
         }
 
         if ($errorBag->isNotEmpty()) {
             foreach ($errorBag->getMessages() as $field => $message) {
-                Log::error("error in canTradeBasic() for $symbol [$field] - " . implode($message));
+                Log::error("error in canTradeBasic() for " . $this->exchangeInfo['symbolinfo']['symbol'] . " [$field] - " .
+                    implode($message));
             }
         }
 
         return $errorBag;
     }
 
-    private function canTrade() {
+    private function canTrade($job) {
 
         Log::info("Checking if trading is possible ...");
+
+        // basic checks
+        $errorBag = $this->canTradeBasic();
+        if ($errorBag->isNotEmpty()) {
+            throw new \Exception("Errors appeared in checkTradeBasic()");
+        }
+
+        // check filters
+        // MIN_NOTIONAL
+        if (
+            $job->next === 'BUY' &&
+            $this->availableAsset["quote"] < $this->exchangeInfo['filters']['MIN_NOTIONAL']['minNotional']
+        ) {
+            $errorBag->add('filter-min_notional-BUY', "Not enough " . $job->quote . " in spot wallet");
+        }
+
+        // MARKET_LOT_SIZE
+
+        // max of base
+        if (
+            $job->next === 'SELL' &&
+            $this->availableAsset["base"] > $this->exchangeInfo['filters']['MARKET_LOT_SIZE']['maxQty']
+        ) {
+            $errorBag->add('filter-market_lot_size-SELL-too-much',
+                "Too much " . $job->base . " inside spot wallet for selling.");
+
+        }
+        // min base
+        if (
+            $job->next === 'SELL' &&
+            $this->availableAsset["base"] < $this->exchangeInfo['filters']['MARKET_LOT_SIZE']['minQty']
+        ) {
+            $errorBag->add('filter-market_lot_size-SELL-too-less',
+                "Too less " . $job->base . " inside spot wallet for selling.");
+
+        }
+
+        // LOT_SIZE
+        if (
+            $job->next === 'SELL' &&
+            $this->availableAsset["base"] > $this->exchangeInfo['filters']['LOT_SIZE']['maxQty']
+        ) {
+            $errorBag->add('filter-lot_size-SELL-too-much', "Too much " . $job->base . " inside spot wallet for selling.");
+
+        }
+        // min base
+        if (
+            $job->next === 'SELL' &&
+            $this->availableAsset["base"] < $this->exchangeInfo['filters']['LOT_SIZE']['minQty']
+        ) {
+            $errorBag->add('filter-lot_size-SELL-too-less', "Too less " . $job->base . " inside spot wallet for selling.");
+
+        }
+
+        if ($errorBag->isNotEmpty()) {
+            foreach ($errorBag->getMessages() as $field => $message) {
+                Log::error("error in canTrade() for " . $this->exchangeInfo['symbolinfo']['symbol'] . " [$field] - " .
+                    implode($message));
+            }
+            throw new \Exception("Errors appeared in checkTrade()");
+        } else {
+            Log::info("Trading check passed successfully");
+        }
     }
 
     public function trade() {
@@ -331,12 +412,18 @@ class LakshmiService {
             // get available base & quote
             $this->setAvailableAsset($job);
 
+            // get necassary exchange infos for symbol
             $this->setExchangeInfos($job->symbol);
 
-            return;
-
             // are we still able to trade?
-            $this->canTrade();
+            try {
+                $this->canTrade($job);
+            } catch (\Exception $e) {
+                Log::info("canTrade() failed ... continue with next job");
+                continue;
+            }
+
+            return;
 
             // get the right strategy
             $strategyService = app($job->strategy);
@@ -348,31 +435,5 @@ class LakshmiService {
         }
 
         Log::info("Lakshmi has done with trading ;-)");
-    }
-
-    private function setExchangeInfos($symbol) {
-        // all info
-        $this->exchangeInfo['all'] = $this->exchangeService->exchangeInfo();
-
-        // specific for the symbol
-        foreach ($this->exchangeInfo['all']["symbols"] as $exSymbol) {
-            if ($exSymbol["symbol"] === $symbol) {
-                $this->exchangeInfo['symbolinfo'] = $exSymbol;
-                break;
-            }
-        }
-
-        // currencies
-        $this->exchangeInfo['currencies']  = [
-            "base" => $this->exchangeInfo['symbolinfo']['baseAsset'],
-            "quote" => $this->exchangeInfo['symbolinfo']['quoteAsset'],
-        ];
-
-        // filters
-        $this->exchangeInfo['filters']  = [];
-        foreach ($this->exchangeInfo['symbolinfo']['filters'] as $filter) {
-            $this->exchangeInfo['filters'][$filter['filterType']] = $filter;
-        }
-
     }
 }
