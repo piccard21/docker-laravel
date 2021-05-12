@@ -323,7 +323,7 @@ class LakshmiService {
             $this->exchangeInfo['precision'] = intval(-log($this->exchangeInfo['filters']['PRICE_FILTER']['tickSize'], 10), 0);
 
         } else {
-            if ($this->exchangeInfo['symbolinfo']['filters'] ['LOT_SIZE']['stepSize'] > 0) {
+            if ($this->exchangeInfo['filters']['LOT_SIZE']['stepSize'] > 0) {
                 $this->exchangeInfo['precision'] = intval(-log($this->exchangeInfo['filters']['LOT_SIZE']['stepSize'], 10), 0);
             } else if ($this->exchangeInfo['filters'] ['MARKET_LOT_SIZE']['stepSize'] > 0) {
                 $this->exchangeInfo['precision'] =
@@ -395,7 +395,7 @@ class LakshmiService {
                 continue;
             }
 
-            Log::info("Lakshmi successfully finished checking strategy for job $job->symbol $job->timeframe");
+            Log::info("Lakshmi finished checking strategy for job $job->symbol $job->timeframe");
         }
 
         // all done

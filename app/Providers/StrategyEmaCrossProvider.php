@@ -17,7 +17,6 @@ class StrategyEmaCrossProvider extends ServiceProvider
         $this->app->bind(StrategyEmaCrossService::class, function ($app) {
             return new StrategyEmaCrossService();
         });
-        $this->app->alias(StrategyEmaCrossService::class, 'strategyemacross');
     }
 
     /**
