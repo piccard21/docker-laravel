@@ -129,8 +129,10 @@ class LakshmiService {
 
         if ($errorBag->isNotEmpty()) {
             foreach ($errorBag->getMessages() as $field => $message) {
-                Log::error("error in canTrade() for " . $this->exchangeInfo['symbolinfo']['symbol'] . " [$field] - " .
-                    implode($message));
+                $msg = "error in canTrade() for " .
+                    $this->exchangeInfo['symbolinfo']['symbol'] .
+                    " [$field] - " . implode($message);
+                $this->log($msg, "CHECK", "ERROR");
             }
             throw new \Exception("Errors appeared in checkTrade()");
         } else {
@@ -171,8 +173,10 @@ class LakshmiService {
 
         if ($errorBag->isNotEmpty()) {
             foreach ($errorBag->getMessages() as $field => $message) {
-                Log::error("error in canTradeBasic() for " . $this->exchangeInfo['symbolinfo']['symbol'] . " [$field] - " .
-                    implode($message));
+                $msg = "error in canTradeBasic() for " .
+                    $this->exchangeInfo['symbolinfo']['symbol'] .
+                    " [$field] - " . implode($message);
+                $this->log($msg, "CHECK", "ERROR");
             }
         }
 
@@ -235,7 +239,8 @@ class LakshmiService {
      */
     public function setAvailableAsset() {
 
-        Log::info("Getting available asset for job " . $this->job->id  . "(" . $this->job->symbol."/".$this->job->timeframe.")");
+        Log::info("Getting available asset for job " . $this->job->id . "(" . $this->job->symbol . "/" . $this->job->timeframe .
+            ")");
 
         $this->availableAsset = [
             "base" => 0,
@@ -244,7 +249,8 @@ class LakshmiService {
 
         // not active yet OR no logs
         // TODO ... bottleneck ... beim Job anlegen sollte was eingetragen werden?
-        if (!JobLog::whereIn('method', ['BUY', 'SELL'])->count() || ($this->job->status !== 'ACTIVE' && $this->job->status !== 'INACTIVE')) {
+        if (!JobLog::whereIn('method', ['BUY', 'SELL'])->count() ||
+            ($this->job->status !== 'ACTIVE' && $this->job->status !== 'INACTIVE')) {
             $this->availableAsset = [
                 "base" => 0,
                 "quote" => $this->job->start_price
@@ -286,8 +292,8 @@ class LakshmiService {
             }
         }
 
-        Log::info("- base: " . $this->availableAsset["base"] . " " .$this->job->base);
-        Log::info("- quote: " . $this->availableAsset["quote"] . "  " .$this->job->quote);
+        Log::info("- base: " . $this->availableAsset["base"] . " " . $this->job->base);
+        Log::info("- quote: " . $this->availableAsset["quote"] . "  " . $this->job->quote);
     }
 
     private function setExchangeInfos() {
@@ -411,33 +417,33 @@ class LakshmiService {
         // ====BUY====
         if ($this->job->next === "BUY") {
             $quoteOrderQty =
-                floor(round($this->availableAsset['quote'] * pow(10, $this->exchangeInfo['precision']), $this->exchangeInfo['precision'])) / pow(10, $this->exchangeInfo['precision']);
+                floor(round($this->availableAsset['quote'] * pow(10, $this->exchangeInfo['precision']),
+                    $this->exchangeInfo['precision'])) / pow(10, $this->exchangeInfo['precision']);
 
             Log::info("Going to buy " . $this->job->base . " for " . $quoteOrderQty . " ...");
-
 
             // BUY!!!!
             $response = $this->exchangeService->buy($this->job->symbol, $quoteOrderQty);
 
-
             // ERROR
             if (!is_array($response)) {
-                $msg = "Error in BUY trade JOBID: ".$this->job->id."): response was null";
+                $msg = "Error in BUY trade JOBID: " . $this->job->id . "): response was null";
                 Log::error($msg);
                 $this->log($msg, 'BUY', 'ERROR');
-            }
-            else if (is_array($response) && array_key_exists('code', $response)) {
+            } else if (is_array($response) && array_key_exists('code', $response)) {
                 //[
                 //    code => -1021,
                 //    msg 0> "..."
                 //]
-                $msg = "Error in BUY trade " . ($response["code"] . ", JOBID: ".$this->job->id."): " . $response["msg"]);
+                $msg = "Error in BUY trade " . ($response["code"] . ", JOBID: " . $this->job->id . "): " . $response["msg"]);
                 Log::error($msg);
                 $this->log($msg, 'BUY', 'ERROR');
 
             }// SUCCESS
             else {
-                $msg = "Successfully bought " . $response['executedQty'] . " of  " . $this->job->base . " (JOBID: ".$this->job->id.")";
+                $msg =
+                    "Successfully bought " . $response['executedQty'] . " of  " . $this->job->base . " (JOBID: " . $this->job->id .
+                    ")";
                 Log::info($msg);
 
                 $this->job->lastTimeTriggered = intval(Carbon::now()->getPreciseTimestamp(3));
@@ -445,13 +451,12 @@ class LakshmiService {
                 $this->job->save();
             }
 
-        }
-        // ====SELL====
+        } // ====SELL====
         else {
-            $quantity = floor(round($this->availableAsset['base'] * pow(10, $this->exchangeInfo['precision']), $this->exchangeInfo['precision'])) / pow(10, $this->exchangeInfo['precision']);
+            $quantity = floor(round($this->availableAsset['base'] * pow(10, $this->exchangeInfo['precision']),
+                    $this->exchangeInfo['precision'])) / pow(10, $this->exchangeInfo['precision']);
 
             Log::info("Going to sell $quantity  " . $this->job->base);
-
 
             // SELL!!!!
             $response = $this->exchangeService->sell($this->job->symbol, $quantity);
@@ -461,20 +466,20 @@ class LakshmiService {
                 $msg = "Error in SELL trade JOBID: $this->job->id): response was null";
                 Log::error($msg);
                 $this->log($msg, 'SELL', 'ERROR');
-            }
-            else if (array_key_exists('code', $response)) {
+            } else if (array_key_exists('code', $response)) {
                 //[
                 //    code => -1021,
                 //    msg 0> "..."
                 //]
 
-                $msg = "Error in SELL trade " . ($response["code"] . ", JOBID: ".$this->job->id."): " . $response["msg"]);
+                $msg = "Error in SELL trade " . ($response["code"] . ", JOBID: " . $this->job->id . "): " . $response["msg"]);
                 Log::error($msg);
                 $this->log($msg, 'SELL', 'ERROR');
 
             }// SUCCESS
             else {
-                $msg = "Successfully sold " . $response['executedQty'] . " of  " . $this->job->base . " (JOBID: ".$this->job->id.")";
+                $msg = "Successfully sold " . $response['executedQty'] . " of  " . $this->job->base . " (JOBID: " . $this->job->id .
+                    ")";
                 Log::info($msg);
 
                 $this->job->next = "BUY";

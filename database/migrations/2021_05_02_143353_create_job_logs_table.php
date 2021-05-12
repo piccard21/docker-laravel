@@ -4,18 +4,16 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateJobLogsTable extends Migration
-{
+class CreateJobLogsTable extends Migration {
     /**
      * Run the migrations.
      *
      * @return void
      */
-    public function up()
-    {
-        Schema::create('job_logs', function (Blueprint $table) {
+    public function up() {
+        Schema::create('job_logs', function(Blueprint $table) {
             $table->id();
-            $table->enum('method', ['STRATEGY', 'BUY', 'SELL']);
+            $table->enum('method', ['CHECK', 'STRATEGY', 'BUY', 'SELL']);
             $table->enum('type', ['ERROR', 'SUCCESS', 'WAITING', 'WARNING', 'INFO']);
             $table->json('message');
             $table->dateTime('time');
@@ -30,8 +28,7 @@ class CreateJobLogsTable extends Migration
      *
      * @return void
      */
-    public function down()
-    {
+    public function down() {
         Schema::dropIfExists('job_logs');
     }
 }
