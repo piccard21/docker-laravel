@@ -8,12 +8,15 @@ use App\Models\JobLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\MessageBag;
 
 class LakshmiService {
 
     protected $exchangeService;
+    public $exchangeInfo = [];
+    protected $availableAsset = [];
 
-    protected $accountInfo;
+    //protected $accountInfo;
 
     public function __construct() {
         $this->exchangeService = app(BinanceApiService::class);
@@ -109,8 +112,8 @@ class LakshmiService {
         $openTimeFormatted = Carbon::createFromTimestamp(intval($last["open_time"] / 1000))->format('Y-m-d H:i:s e');
         $closeTimeFormatted = Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->format('Y-m-d H:i:s e');
 
-        Log::info("- open time: " . $openTimeFormatted . " (".$last["open_time"].")");
-        Log::info("- close time: " . $closeTimeFormatted . " (".$last["close_time"].")");
+        Log::info("- open time: " . $openTimeFormatted . " (" . $last["open_time"] . ")");
+        Log::info("- close time: " . $closeTimeFormatted . " (" . $last["close_time"] . ")");
     }
 
     private function getLastSymbolEntry($symbol, $timeframe) {
@@ -124,20 +127,26 @@ class LakshmiService {
             ->first();
     }
 
-    public function getAvailableAsset($job) {
+    /**
+     * get available asset of this job
+     *
+     * @param $job
+     * @return array
+     */
+    public function setAvailableAsset($job) {
 
         Log::info("Getting available asset for job $job->id ($job->symbol/$job->timeframe)");
 
-        $available = [
+        $this->availableAsset = [
             "base" => 0,
             "quote" => 0,
         ];
 
         // not active yet OR no logs
-        if (($job->status !== 'ACTIVE' && $job->status !== 'INACTIVE')  || !JobLog::count()) {
-            $available =  [
+        if (($job->status !== 'ACTIVE' && $job->status !== 'INACTIVE') || !JobLog::count()) {
+            $available = [
                 "base" => 0,
-                "quote" => $available[$job->start_price]
+                "quote" => $job->start_price
             ];
         }
 
@@ -164,22 +173,20 @@ class LakshmiService {
 
         // should be also valid for inactive jobs
         if ($job->next === "BUY") {
-            $available =  [
+            $this->availableAsset  = [
                 "base" => 0,
                 "quote" => $lastJob->message["cummulativeQuoteQty"],
             ];
 
         } else if ($job->next === "SELL") {
-            $available =  [
+            $this->availableAsset  = [
                 "base" => $lastJob->message["executedQty"],
                 "quote" => 0
             ];
         }
 
-        Log::info("- base: " . $available["base"] . " $job->base");
-        Log::info("- quote: " . $available["quote"] . " $job->quote");
-
-        return $available;
+        Log::info("- base: " . $this->availableAsset ["base"] . " $job->base");
+        Log::info("- quote: " . $this->availableAsset ["quote"] . " $job->quote");
     }
 
     /**
@@ -223,6 +230,63 @@ class LakshmiService {
         return true;
     }
 
+
+
+    /**
+     * check basic binance rules if trading is possible
+     *
+     * @param string $nextAction
+     * @param string $symbol
+     * @return MessageBag
+     */
+    public function canTradeBasic(string $symbol, array $accountInfo) {
+        Log::info("Checking canTradeBasic() ...");
+        // CHECK BASIC PERMISSIONS
+        $exchangeInfoSymbol = null;
+
+        foreach ($this->exchangeInfo["symbols"] as $exSymbol) {
+            if ($exSymbol["symbol"] === $symbol) {
+                $exchangeInfoSymbol = $exSymbol;
+                break;
+            }
+        }
+
+        // check exchangeInfo permissions/**1*/
+        $isSpotTradingAllowed = $exchangeInfoSymbol["isSpotTradingAllowed"];
+        $symbolHasMarket = in_array('MARKET', $exchangeInfoSymbol["orderTypes"]);
+        $symbolHasSpot = in_array('SPOT', $exchangeInfoSymbol["permissions"]);
+
+        $errorBag = new MessageBag;
+        if (!$isSpotTradingAllowed) {
+            $errorBag->add('exchange-info-spottrading', "Spot trading not allowed");
+        }
+        if (!$symbolHasMarket) {
+            $errorBag->add('exchange-info-ordertype', "Order types doesn't include market");
+        }
+        if (!$symbolHasSpot) {
+            $errorBag->add('exchange-info-spot-permissions', "No spot permissions");
+        }
+        if (!$accountInfo["canTrade"]) {
+            $errorBag->add('account-info-can-trade', "Account doesn't allow trading");
+        }
+        if ($accountInfo["accountType"] !== "SPOT") {
+            $errorBag->add('account-info-account-type', "Account type isn't SPOT");
+        }
+
+        if ($errorBag->isNotEmpty()) {
+            foreach ($errorBag->getMessages() as $field => $message) {
+                Log::error("error in canTradeBasic() for $symbol [$field] - " . implode($message));
+            }
+        }
+
+        return $errorBag;
+    }
+
+    private function canTrade() {
+
+        Log::info("Checking if trading is possible ...");
+    }
+
     public function trade() {
 
         Log::info('===============================================================');
@@ -230,6 +294,7 @@ class LakshmiService {
         Log::info('===============================================================');
 
         // TODO lastTimeTriggered imemr von Anfang an setzen
+        // start_price in start_amouont umbenennen
         //Job::insert([
         //    "symbol" => "ETHUSDT",
         //    "timeframe" => "4h",
@@ -264,7 +329,9 @@ class LakshmiService {
              */
 
             // get available base & quote
-            $assetAvailable = $this->getAvailableAsset($job);
+            $this->setAvailableAsset($job);
+
+            $this->setExchangeInfos($job->symbol);
 
             return;
 
@@ -281,5 +348,31 @@ class LakshmiService {
         }
 
         Log::info("Lakshmi has done with trading ;-)");
+    }
+
+    private function setExchangeInfos($symbol) {
+        // all info
+        $this->exchangeInfo['all'] = $this->exchangeService->exchangeInfo();
+
+        // specific for the symbol
+        foreach ($this->exchangeInfo['all']["symbols"] as $exSymbol) {
+            if ($exSymbol["symbol"] === $symbol) {
+                $this->exchangeInfo['symbolinfo'] = $exSymbol;
+                break;
+            }
+        }
+
+        // currencies
+        $this->exchangeInfo['currencies']  = [
+            "base" => $this->exchangeInfo['symbolinfo']['baseAsset'],
+            "quote" => $this->exchangeInfo['symbolinfo']['quoteAsset'],
+        ];
+
+        // filters
+        $this->exchangeInfo['filters']  = [];
+        foreach ($this->exchangeInfo['symbolinfo']['filters'] as $filter) {
+            $this->exchangeInfo['filters'][$filter['filterType']] = $filter;
+        }
+
     }
 }
