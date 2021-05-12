@@ -64,19 +64,22 @@ class LakshmiService {
 
         $lastEntry = $this->getLastSymbolEntry($symbol, $timeframe);
 
-        $startTime = null;
+        $openTime = null;
         if ($lastEntry) {
-            $startTime = $lastEntry->time;
+            $openTime = $lastEntry->time;
+            $closeTime = $lastEntry->close_time;
             $lastEntry->delete();
         }
 
-        $startTimeFormatted = Carbon::createFromTimestamp(intval($startTime / 1000))->format('Y-m-d H:i:s e');
-        $startTimeTimestampMilliFormatted = intval($startTime / 1000);
-        Log::info("Starttime for update is $startTimeFormatted ($startTimeTimestampMilliFormatted)");
+        $openTimeFormatted = Carbon::createFromTimestamp(intval($openTime / 1000))->format('Y-m-d H:i:s e');
+        $closeTimeFormatted = Carbon::createFromTimestamp(intval($closeTime / 1000))->format('Y-m-d H:i:s e');
+        Log::info("Last entry for $symbol/$timeframe:");
+        Log::info("- open time: $openTimeFormatted ($openTime)");
+        Log::info("- close time: $closeTimeFormatted ($closeTime)");
 
         $last = null;
         do {
-            $klines = $this->exchangeService->gethistoricaldata($symbol, $timeframe, $startTime);
+            $klines = $this->exchangeService->gethistoricaldata($symbol, $timeframe, $openTime);
             $klinesNr = count($klines);
 
             if ($klinesNr) {
@@ -86,7 +89,7 @@ class LakshmiService {
             // still 1000 so there are more
             if ($klinesNr === 1000) {
                 // get the last startTime and add a millisecond, so we won't get the same
-                $startTime = $klines[999]['open_time'] + 1;
+                $openTime = $klines[999]['open_time'] + 1;
             } else {
                 $last = end($klines);
             }
@@ -101,9 +104,13 @@ class LakshmiService {
             ]);
 
         Log::info("Updated historcial data of $symbol with timeframe $timeframe");
-        Log::info("Last entry time: " . Carbon::createFromTimestamp(intval($last["open_time"] / 1000))->format('Y-m-d H:i:s e'));
-        Log::info("Last entry close_time: " .
-            Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->format('Y-m-d H:i:s e'));
+        Log::info("Current entry for $symbol/$timeframe:");
+
+        $openTimeFormatted = Carbon::createFromTimestamp(intval($last["open_time"] / 1000))->format('Y-m-d H:i:s e');
+        $closeTimeFormatted = Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->format('Y-m-d H:i:s e');
+
+        Log::info("- open time: " . $openTimeFormatted . " (".$last["open_time"].")");
+        Log::info("- close time: " . $closeTimeFormatted . " (".$last["close_time"].")");
     }
 
     private function getLastSymbolEntry($symbol, $timeframe) {
@@ -118,6 +125,9 @@ class LakshmiService {
     }
 
     public function getAvailableAsset($job) {
+
+        Log::info("Getting available asset for job $job->id ($job->symbol/$job->timeframe)");
+
         $available = [
             "base" => 0,
             "quote" => 0,
@@ -150,7 +160,7 @@ class LakshmiService {
          */
 
         // get last job_log
-        $lastJob = $job->logs()->orderBy('time', 'desc')->first();
+        $lastJob = $job->logs()->whereIn('method', ['BUY', 'SELL'])->orderBy('time', 'desc')->first();
 
         // should be also valid for inactive jobs
         if ($job->next === "BUY") {
@@ -166,6 +176,9 @@ class LakshmiService {
             ];
         }
 
+        Log::info("- base: " . $available["base"] . " $job->base");
+        Log::info("- quote: " . $available["quote"] . " $job->quote");
+
         return $available;
     }
 
@@ -179,6 +192,10 @@ class LakshmiService {
     private function canStrategyTriggeredNow($job) {
         Log::info("Checking if strategy can be triggered now...");
 
+        // TODO ... stimmt das .. .was wenn es zwischenzeitlich einen Ausfall gab
+        // prüfen ob es Kerzen danach gibt
+        // wenn ja auf WIATING/READY umstellen?
+
         $symbolModel = Symbol::setCollection($job->symbol);
 
         $entry = $symbolModel->where([
@@ -187,7 +204,6 @@ class LakshmiService {
         ])->first();
 
         if (empty($entry)) {
-            // TODO .. .kann eigentlich nicht passieren
             throw new \Exception("Cannot find symbol entry");
         }
         $closeTime = Carbon::createFromTimestamp($entry->close_time / 1000);
@@ -202,6 +218,8 @@ class LakshmiService {
             return false;
         }
 
+        Log::info("Strategy can be triggered");
+
         return true;
     }
 
@@ -211,6 +229,7 @@ class LakshmiService {
         Log::info('Starting Lakshmi trading...');
         Log::info('===============================================================');
 
+        // TODO lastTimeTriggered imemr von Anfang an setzen
         //Job::insert([
         //    "symbol" => "ETHUSDT",
         //    "timeframe" => "4h",
@@ -243,7 +262,6 @@ class LakshmiService {
              * 3. canTrade
              * 4. strategy
              */
-            //$response = $this->canTrade($job->symbol, $job->next);
 
             // get available base & quote
             $assetAvailable = $this->getAvailableAsset($job);
