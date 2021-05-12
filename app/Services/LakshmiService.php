@@ -389,10 +389,102 @@ class LakshmiService {
         }
     }
 
+    /**
+     * handy logging function
+     *
+     * @param string $msg
+     * @param string $type
+     */
+    public function log(string $msg, $method, $type) {
+        Log::info($msg);
+
+        JobLog::create([
+            'method' => $method,
+            'type' => $type,
+            'message' => $msg,
+            'time' => Carbon::now(),
+            'job_id' => $this->job->id
+        ]);
+    }
 
 
     private function triggerTrade() {
-            Log::info("TRADDDDE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        Log::info("TRADDDDE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
+        // ====BUY====
+        if ($this->job->next === "BUY") {
+            $quoteOrderQty =
+                floor(round($this->availableAsset['quote'] * pow(10, $this->exchangeInfo['precision']), $this->exchangeInfo['precision'])) / pow(10, $this->exchangeInfo['precision']);
+
+            Log::info("Going to buy " . $this->job->base . " for " . $quoteOrderQty . " ...");
+
+
+            // BUY!!!!
+            $response = $this->exchangeService->buy($this->job->symbol, $quoteOrderQty);
+
+
+            // ERROR
+            if (!is_array($response)) {
+                $msg = "Error in BUY trade JOBID: ".$this->job->id."): response was null";
+                Log::error($msg);
+                $this->log($msg, 'BUY', 'ERROR');
+            }
+            else if (is_array($response) && array_key_exists('code', $response)) {
+                //[
+                //    code => -1021,
+                //    msg 0> "..."
+                //]
+                $msg = "Error in BUY trade " . ($response["code"] . ", JOBID: ".$this->job->id."): " . $response["msg"]);
+                Log::error($msg);
+                $this->log($msg, 'BUY', 'ERROR');
+
+            }// SUCCESS
+            else {
+                $msg = "Successfully bought " . $response['executedQty'] . " of  " . $this->job->base . " (JOBID: ".$this->job->id.")";
+                Log::info($msg);
+
+                $this->job->lastTimeTriggered = intval(Carbon::now()->getPreciseTimestamp(3));
+                $this->job->next = "SELL";
+                $this->job->save();
+            }
+
+        }
+        // ====SELL====
+        else {
+            $quantity = floor(round($this->availableAsset['base'] * pow(10, $this->exchangeInfo['precision']), $this->exchangeInfo['precision'])) / pow(10, $this->exchangeInfo['precision']);
+
+            Log::info("Going to sell $quantity  " . $this->job->base);
+
+
+            // SELL!!!!
+            $response = $this->exchangeService->sell($this->job->symbol, $quantity);
+
+            // error
+            if (!is_array($response)) {
+                $msg = "Error in SELL trade JOBID: $this->job->id): response was null";
+                Log::error($msg);
+                $this->log($msg, 'SELL', 'ERROR');
+            }
+            else if (array_key_exists('code', $response)) {
+                //[
+                //    code => -1021,
+                //    msg 0> "..."
+                //]
+
+                $msg = "Error in SELL trade " . ($response["code"] . ", JOBID: ".$this->job->id."): " . $response["msg"]);
+                Log::error($msg);
+                $this->log($msg, 'SELL', 'ERROR');
+
+            }// SUCCESS
+            else {
+                $msg = "Successfully sold " . $response['executedQty'] . " of  " . $this->job->base . " (JOBID: ".$this->job->id.")";
+                Log::info($msg);
+
+                $this->job->next = "BUY";
+                $this->job->lastTimeTriggered = intval(Carbon::now()->getPreciseTimestamp(3));
+                $this->job->save();
+            }
+        }
     }
 
     public function trade() {

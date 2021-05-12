@@ -124,7 +124,7 @@ class StrategyEmaCrossService {
                     $this->lakshmiService->job->status = "READY";
 
                     $msg = "job status for " . $this->lakshmiService->job->id . "set to READY";
-                    $this->log($msg);
+                    $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
                 }
             } else if ($this->lakshmiService->job->status === 'READY') {
                 Log::info("Job status  for " . $this->lakshmiService->job->id . " is READY");
@@ -133,7 +133,7 @@ class StrategyEmaCrossService {
                     $this->lakshmiService->job->status = "ACTIVE";
 
                     $msg = "Job status for " . $this->lakshmiService->job->id . " set to ACTIVE";
-                    $this->log($msg);
+                    $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
                 } else {
                     $this->lakshmiService->job->status = "READY";
                 }
@@ -150,14 +150,14 @@ class StrategyEmaCrossService {
                     $this->lakshmiService->job->status = "READY";
 
                     $msg = "job for " . $this->lakshmiService->job->symbol . " set to status READY";
-                    $this->log($msg);
+                    $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
                 }
             } else if ($this->lakshmiService->job->status === 'READY') {
                 if ($this->end1["value"] <= $this->end2["value"]) {
                     $this->lakshmiService->job->status = "ACTIVE";
 
                     $msg = "job for " . $this->lakshmiService->job->symbol . " set to status ACTIVE";
-                    $this->log($msg);
+                    $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
                 } else {
                     $this->lakshmiService->job->status = "READY";
                 }
@@ -167,24 +167,6 @@ class StrategyEmaCrossService {
         $this->lakshmiService->job->save();
 
         return $this->lakshmiService->job->status === 'ACTIVE';
-    }
-
-    /**
-     * handy logging function
-     *
-     * @param string $msg
-     * @param string $type
-     */
-    private function log(string $msg, $type = "INFO") {
-        Log::info($msg);
-
-        JobLog::create([
-            'method' => 'STRATEGY',
-            'type' => $type,
-            'message' => $msg,
-            'time' => Carbon::now(),
-            'job_id' => $this->lakshmiService->job->id
-        ]);
     }
 
     /**
