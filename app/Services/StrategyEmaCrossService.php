@@ -14,6 +14,9 @@ class StrategyEmaCrossService {
 
     //protected $exchangeService;
     protected $lakshmiService;
+    private $emas;
+    private $end1;
+    private $end2;
 
     public function __construct() {
         //$this->exchangeService = app(BinanceApiService::class);
@@ -24,32 +27,22 @@ class StrategyEmaCrossService {
 
         Log::info("Checking strategy ...");
 
-        $this->calcEmas();
-        //$emas = $this->calcEmas($job->symbol, $job->settings['timeframe'], [$job->settings['ema1'], $job->settings['ema2']]);
+        // get emas
+        $this->emas = $this->calcEmas();
 
-        // check ema's
-        //$end1 = end($emas["ema1"]);
-        //$end2 = end($emas["ema2"]);
-        //
-        //if (empty($end1) || empty($end2)) {
-        //    Log::error("EMAs are empty ...");
-        //    JobLog::create([
-        //        'method' => 'STRATEGY',
-        //        'type' => 'ERROR',
-        //        'message' => "Empty EMAs",
-        //        'original_amount' => null,
-        //        'executed_amount' => null,
-        //        'cummulative_quote_qty' => null,
-        //        'time' => Carbon::now()->timestamp * 1000,
-        //        'job_id' => $job->id
-        //    ]);
-        //    throw new \Exception("No Emas");
-        //}
+        // we only need the last one
+        $this->end1 = end($this->emas["ema1"]);
+        $this->end2 = end($this->emas["ema2"]);
 
-    }
+        // job still isn't active ... set status
+        if ($this->lakshmiService->job->status !== 'ACTIVE') {
+            $this->checkStatus();
 
-    private function getEmas() {
-        return $this->lakshmiService->job->settings;
+        } // job is active ... trade
+        else {
+
+        }
+
     }
 
     private function getEma1() {
@@ -106,5 +99,85 @@ class StrategyEmaCrossService {
 
         return $emas;
 
+    }
+
+    private function checkStatus() {
+
+        Log::info("Job for " . $this->lakshmiService->job->symbol . " isn't ACTIVE ... checking if status can change ...");
+        Log::info("EMA values  for " . $this->lakshmiService->job->symbol . " are " . $this->end1["value"] . " " .
+            $this->end2["value"]);
+
+        // BUY
+        if ($this->lakshmiService->job->next === "BUY") {
+            Log::info("Next action for job " . $this->lakshmiService->job->id . " is BUY");
+
+            if ($this->lakshmiService->job->status === 'WAITING') {
+                Log::info("Job status for " . $this->lakshmiService->job->id . " is WAITING");
+
+                if ($this->end1["value"] >= $this->end2["value"]) {
+                    $this->lakshmiService->job->status = "WAITING";
+                } else {
+                    $this->lakshmiService->job->status = "READY";
+
+                    $msg = "job status for " . $this->lakshmiService->job->id . "set to READY";
+                    $this->log($msg);
+                }
+            } else if ($this->lakshmiService->job->status === 'READY') {
+                Log::info("Job status  for " . $this->lakshmiService->job->id . " is READY");
+
+                if ($this->end1["value"] >= $this->end2["value"]) {
+                    $this->lakshmiService->job->status = "ACTIVE";
+
+                    $msg = "Job status for " . $this->lakshmiService->job->id . " set to ACTIVE";
+                    $this->log($msg);
+                } else {
+                    $this->lakshmiService->job->status = "READY";
+                }
+            }
+
+        } // SELL
+        else {
+            Log::info("Next job for $this->lakshmiService->job->id is BUY");
+
+            if ($this->lakshmiService->job->status === 'WAITING') {
+                if ($this->end1["value"] <= $this->end2["value"]) {
+                    $this->lakshmiService->job->status = "WAITING";
+                } else {
+                    $this->lakshmiService->job->status = "READY";
+
+                    $msg = "job for " . $this->lakshmiService->job->symbol . " set to status READY";
+                    $this->log($msg);
+                }
+            } else if ($this->lakshmiService->job->status === 'READY') {
+                if ($this->end1["value"] <= $this->end2["value"]) {
+                    $this->lakshmiService->job->status = "ACTIVE";
+
+                    $msg = "job for " . $this->lakshmiService->job->symbol . " set to status ACTIVE";
+                    $this->log($msg);
+                } else {
+                    $this->lakshmiService->job->status = "READY";
+                }
+            }
+        }
+
+        $this->lakshmiService->job->save();
+    }
+
+    /**
+     * handy logging function
+     *
+     * @param string $msg
+     * @param string $type
+     */
+    private function log(string $msg, $type = "INFO") {
+        Log::info($msg);
+
+        JobLog::create([
+            'method' => 'STRATEGY',
+            'type' => $type,
+            'message' => $msg,
+            'time' => Carbon::now(),
+            'job_id' => $this->lakshmiService->job->id
+        ]);
     }
 }

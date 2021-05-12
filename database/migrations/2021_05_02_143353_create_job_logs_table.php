@@ -18,7 +18,7 @@ class CreateJobLogsTable extends Migration
             $table->enum('method', ['STRATEGY', 'BUY', 'SELL']);
             $table->enum('type', ['ERROR', 'SUCCESS', 'WAITING', 'WARNING', 'INFO']);
             $table->json('message');
-            $table->bigInteger('time');
+            $table->dateTime('time');
             $table->bigInteger('job_id')->unsigned()->index();
             $table->timestamps();
             $table->foreign('job_id')->references('id')->on('jobs')->onDelete('cascade');;

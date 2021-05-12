@@ -144,46 +144,47 @@ class LakshmiService {
         ];
 
         // not active yet OR no logs
-        if (($job->status !== 'ACTIVE' && $job->status !== 'INACTIVE') || !JobLog::count()) {
-            $available = [
+        // TODO ... bottleneck ... beim Job anlegen sollte was eingetragen werden?
+        if (!JobLog::count() || ($job->status !== 'ACTIVE' && $job->status !== 'INACTIVE')) {
+            $this->availableAsset = [
                 "base" => 0,
                 "quote" => $job->start_price
             ];
-        }
+        } else {
+            /**
+             * TODO wir nehmen an, dass wir immer 100% kaufen/verkaufen
+             *
+             * - BUY:
+             *  "executedQty": "0.00718000",
+             *  "cummulativeQuoteQty": "24.98898480"
+             *
+             *  - base: executedQty
+             *  - quote: 0
+             *
+             * - SELL:
+             *  "executedQty": "0.00718000",
+             *  "cummulativeQuoteQty": "25.36212940"
+             *
+             * - base: 0
+             * - quote: cummulativeQuoteQty
+             */
 
-        /**
-         * TODO wir nehmen an, dass wir immer 100% kaufen/verkaufen
-         *
-         * - BUY:
-         *  "executedQty": "0.00718000",
-         *  "cummulativeQuoteQty": "24.98898480"
-         *
-         *  - base: executedQty
-         *  - quote: 0
-         *
-         * - SELL:
-         *  "executedQty": "0.00718000",
-         *  "cummulativeQuoteQty": "25.36212940"
-         *
-         * - base: 0
-         * - quote: cummulativeQuoteQty
-         */
+            // get last job_log
+            $lastJob = $job->logs()->whereIn('method', ['BUY', 'SELL'])->orderBy('time', 'desc')->first();
 
-        // get last job_log
-        $lastJob = $job->logs()->whereIn('method', ['BUY', 'SELL'])->orderBy('time', 'desc')->first();
+            // should be also valid for inactive jobs
+            if ($job->next === "BUY") {
+                $this->availableAsset = [
+                    "base" => 0,
+                    "quote" => $lastJob->message["cummulativeQuoteQty"],
+                ];
 
-        // should be also valid for inactive jobs
-        if ($job->next === "BUY") {
-            $this->availableAsset = [
-                "base" => 0,
-                "quote" => $lastJob->message["cummulativeQuoteQty"],
-            ];
-
-        } else if ($job->next === "SELL") {
-            $this->availableAsset = [
-                "base" => $lastJob->message["executedQty"],
-                "quote" => 0
-            ];
+            } else if ($job->next === "SELL") {
+                $this->availableAsset = [
+                    "base" => $lastJob->message["executedQty"],
+                    "quote" => 0
+                ];
+            }
         }
 
         Log::info("- base: " . $this->availableAsset ["base"] . " $job->base");
@@ -267,7 +268,8 @@ class LakshmiService {
             if ($this->exchangeInfo['symbolinfo']['filters'] ['LOT_SIZE']['stepSize'] > 0) {
                 $this->exchangeInfo['precision'] = intval(-log($this->exchangeInfo['filters']['LOT_SIZE']['stepSize'], 10), 0);
             } else if ($this->exchangeInfo['filters'] ['MARKET_LOT_SIZE']['stepSize'] > 0) {
-                $this->exchangeInfo['precision'] = intval(-log($this->exchangeInfo['filters']['MARKET_LOT_SIZE']['stepSize'], 10), 0);
+                $this->exchangeInfo['precision'] =
+                    intval(-log($this->exchangeInfo['filters']['MARKET_LOT_SIZE']['stepSize'], 10), 0);
             }
         }
     }
