@@ -24,46 +24,15 @@ class StrategyEmaCrossService {
     }
 
     /**
-     * The real strategy
-     *
-     * @return bool
+     * calculate the EMAs
+     * Until now from the very beginning
+     * @return array|array[]
      * @throws \Exception
      */
-    public function strategy() {
-
-        Log::info("Checking strategy ...");
-
-        // get emas
-        $this->emas = $this->calcEmas();
-
-        // we only need the last one
-        $this->end1 = end($this->emas["ema1"]);
-        $this->end2 = end($this->emas["ema2"]);
-
-        Log::info("EMA values for " . $this->lakshmiService->job->symbol . " are " . $this->end1["value"] . " " .
-            $this->end2["value"]);
-
-        // job still isn't active ... set status
-        if ($this->lakshmiService->job->status !== 'ACTIVE') {
-            return $this->checkStatus();
-        } // job is active ... check if we can buy or sell
-        else {
-            return $this->canTriggerTrade();
-        }
-    }
-
-    private function getEma1() {
-        return $this->lakshmiService->job->settings['ema1'];
-    }
-
-    private function getEma2() {
-        return $this->lakshmiService->job->settings['ema2'];
-    }
-
     private function calcEmas() {
         Log::info('Start getting emas for ' . $this->lakshmiService->job->symbol . ' with timeframe ' .
             $this->lakshmiService->job->timeframe);
-        Log::info('Ranges for EMAs are ' . $this->getEma1() . ', ' . $this->getEma2());
+        Log::info('Ranges for EMAs are ' . $this->getEma1Setting() . ', ' . $this->getEma2Setting());
 
         $symbolModel = Symbol::setCollection($this->lakshmiService->job->symbol);
 
@@ -73,7 +42,7 @@ class StrategyEmaCrossService {
             "timeframe" => $this->lakshmiService->job->timeframe
         ])->orderBy('time', 'asc')->get();
 
-        // TODO ... sollen wir überhaupt die letzte mit reinnehmen ... denke schon ... MARCO!!!
+        // TODO ... MARCO!!!
         // get rid of the last one and substitute it with the current price
         $currentPrice = $this->lakshmiService->exchangeService->getCurrentPrice($this->lakshmiService->job->symbol);
         $closePrices = $klines->pluck('close');
@@ -83,8 +52,8 @@ class StrategyEmaCrossService {
         // calc emas
         $closePrices = $closePrices->toArray();
         $emasRaw = [];
-        $emasRaw["ema1"] = trader_ema($closePrices, $this->getEma1());
-        $emasRaw["ema2"] = trader_ema($closePrices, $this->getEma2());
+        $emasRaw["ema1"] = trader_ema($closePrices, $this->getEma1Setting());
+        $emasRaw["ema2"] = trader_ema($closePrices, $this->getEma2Setting());
 
         if (!is_array($emasRaw["ema1"]) || !is_array($emasRaw["ema2"])) {
             throw new \Exception("trader_ema() didn't return an array");
@@ -108,9 +77,35 @@ class StrategyEmaCrossService {
 
     }
 
+    /**
+     * The core of the strategy
+     *
+     * @return bool
+     * @throws \Exception
+     */
+    private function canTriggerTrade() {
+        if ($this->lakshmiService->job->next === "BUY") {
+            if ($this->end1 <= $this->end2) {
+                Log::info("EMAs haven't crossed ... do nothing");
+                return false;
+            } else {
+                Log::info("EMAs have crossed ... BUY");
+                return true;
+            }
+        } else {
+            if ($this->end1 >= $this->end2) {
+                Log::info("EMAs haven't crossed ... do nothing");
+                return false;
+            } else {
+                Log::info("EMAs have crossed ... SELL");
+                return true;
+            }
+        }
+    }
+
     private function checkStatus() {
-        Log::info("Job for " . $this->lakshmiService->job->symbol . " isn't ACTIVE ... checking if status can change ...");
-        Log::info("Going to check if status can be changed ...");
+        Log::info("Job for " . $this->lakshmiService->job->symbol . " isn't ACTIVE");
+        Log::info("Going to check if status can be changed");
 
         // BUY
         if ($this->lakshmiService->job->next === "BUY") {
@@ -170,29 +165,40 @@ class StrategyEmaCrossService {
         return $this->lakshmiService->job->status === 'ACTIVE';
     }
 
+    private function getEma1Setting() {
+        return $this->lakshmiService->job->settings['ema1'];
+    }
+
+    private function getEma2Setting() {
+        return $this->lakshmiService->job->settings['ema2'];
+    }
+
     /**
-     * The core of the strategy
+     * The real strategy
      *
      * @return bool
      * @throws \Exception
      */
-    private function canTriggerTrade() {
-        if ($this->lakshmiService->job->next === "BUY") {
-            if ($this->end1 <= $this->end2) {
-                Log::info("EMAs haven't crossed ... do nothing");
-                return false;
-            } else {
-                Log::info("EMAs have crossed ... BUY");
-                return true;
-            }
-        } else {
-            if ($this->end1 >= $this->end2) {
-                Log::info("EMAs haven't crossed ... do nothing");
-                return false;
-            } else {
-                Log::info("EMAs have crossed ... SELL");
-                return true;
-            }
+    public function strategy() {
+
+        Log::info("Checking strategy ...");
+
+        // get emas
+        $this->emas = $this->calcEmas();
+
+        // we only need the last one
+        $this->end1 = end($this->emas["ema1"]);
+        $this->end2 = end($this->emas["ema2"]);
+
+        Log::info("EMA values for " . $this->lakshmiService->job->symbol . " are " . $this->end1["value"] . " " .
+            $this->end2["value"]);
+
+        // job still isn't active ... set status
+        if ($this->lakshmiService->job->status !== 'ACTIVE') {
+            return $this->checkStatus();
+        } // job is active ... check if we can buy or sell
+        else {
+            return $this->canTriggerTrade();
         }
     }
 }

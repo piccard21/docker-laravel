@@ -24,13 +24,8 @@ class HomeController extends Controller {
      * @return \Illuminate\Contracts\Support\Renderable
      */
     public function index(LakshmiService $lakshmiService, BinanceApiService $binanceApiService) {
-        /**
-         * 1. alle jobs vom User
-         * 2. wieviel Gewinn/Verlust
-         * 3. Btn Info für logs
-         */
-
         $jobs = [];
+
         foreach (Job::where('user_id', auth()->id())->get() as $job) {
             // set job for service
             $lakshmiService->setJob($job);

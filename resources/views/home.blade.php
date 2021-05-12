@@ -37,7 +37,7 @@
                                     <td>{{ $job["id"] }}</td>
                                     <td>{{ $job["symbol"] }}</td>
                                     <td>{{ $job["timeframe"] }}</td>
-                                    <td class="@if($job["status"] === 'ACTIVE') table-success @endif">{{ $job["status"] }}</td>
+                                    <td class="@if($job["status"] === 'ACTIVE') table-success @elseif ($job["status"] === 'INACTIVE') table-danger @elseif ($job["status"] === 'READY') table-warning @endif">{{ $job["status"] }}</td>
                                     <td>{{ $job["next"] }}</td>
                                     <td>{{ $job["lastTimeTriggered"] }}</td>
                                     <td>{{ $job["start_price"] }}</td>
