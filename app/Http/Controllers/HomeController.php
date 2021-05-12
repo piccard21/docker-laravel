@@ -63,8 +63,11 @@ class HomeController extends Controller {
 
 
     public function show(Request $request, int $id) {
+        $job = Job::find($id);
+
         return view('show', [
-            "logs" => Job::find($id)->logs()->get()->toArray()
+            "job" => $job,
+            "logs" => $job->logs()->get()->toArray()
         ]);
     }
 }
