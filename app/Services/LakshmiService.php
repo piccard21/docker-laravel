@@ -35,7 +35,7 @@ class LakshmiService {
 
         // TODO ... stimmt das .. .was wenn es zwischenzeitlich einen Ausfall gab
         // prüfen ob es Kerzen danach gibt
-        // wenn ja auf WIATING/READY umstellen?
+        // wenn ja auf WAITING/READY umstellen?
 
         $symbolModel = Symbol::setCollection($this->job->symbol);
 
@@ -414,10 +414,10 @@ class LakshmiService {
                 // get available base & quote
                 $this->setAvailableAsset();
 
-                // get necassary exchange infos
+                // get necessary exchange infos
                 $this->setExchangeInfos();
 
-                // are we still able to trade?
+                // does the exchanges service allow us to trade
                 $this->canTrade();
 
                 // get the right strategy
@@ -547,13 +547,13 @@ class LakshmiService {
             $openTime = $lastEntry->time;
             $closeTime = $lastEntry->close_time;
             $lastEntry->delete();
-        }
 
-        $openTimeFormatted = Carbon::createFromTimestamp(intval($openTime / 1000))->format('Y-m-d H:i:s e');
-        $closeTimeFormatted = Carbon::createFromTimestamp(intval($closeTime / 1000))->format('Y-m-d H:i:s e');
-        Log::info("Last entry for $symbol/$timeframe:");
-        Log::info("- open time: $openTimeFormatted ($openTime)");
-        Log::info("- close time: $closeTimeFormatted ($closeTime)");
+            $openTimeFormatted = Carbon::createFromTimestamp(intval($openTime / 1000))->format('Y-m-d H:i:s e');
+            $closeTimeFormatted = Carbon::createFromTimestamp(intval($closeTime / 1000))->format('Y-m-d H:i:s e');
+            Log::info("Last entry for $symbol/$timeframe:");
+            Log::info("- open time: $openTimeFormatted ($openTime)");
+            Log::info("- close time: $closeTimeFormatted ($closeTime)");
+        }
 
         $last = null;
         do {

@@ -127,7 +127,7 @@ class StrategyEmaCrossService {
                     $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
                 }
             } else if ($this->lakshmiService->job->status === 'READY') {
-                Log::info("Job status  for " . $this->lakshmiService->job->id . " is READY");
+                Log::info("Job status for job " . $this->lakshmiService->job->id . " is READY");
 
                 if ($this->end1["value"] >= $this->end2["value"]) {
                     $this->lakshmiService->job->status = "ACTIVE";
