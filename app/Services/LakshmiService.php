@@ -230,13 +230,13 @@ class LakshmiService {
         return true;
     }
 
-    private function setExchangeInfos($symbol) {
+    private function setExchangeInfos($job) {
         // all info
         $this->exchangeInfo['all'] = $this->exchangeService->exchangeInfo();
 
         // specific for the symbol
         foreach ($this->exchangeInfo['all']["symbols"] as $exSymbol) {
-            if ($exSymbol["symbol"] === $symbol) {
+            if ($exSymbol["symbol"] === $job->symbol) {
                 $this->exchangeInfo['symbolinfo'] = $exSymbol;
                 break;
             }
@@ -257,6 +257,18 @@ class LakshmiService {
         // account info
         $this->exchangeInfo['accountInfo'] = $this->exchangeService->accountInfo();
 
+        // precision
+        if ($job->next === 'BUY') {
+            // tick
+            $this->exchangeInfo['precision'] = intval(-log($this->exchangeInfo['filters']['PRICE_FILTER']['tickSize'], 10), 0);
+
+        } else {
+            if ($this->exchangeInfo['symbolinfo']['filters'] ['LOT_SIZE']['stepSize'] > 0) {
+                $this->exchangeInfo['precision'] = intval(-log($this->exchangeInfo['filters']['LOT_SIZE']['stepSize'], 10), 0);
+            } else if ($this->exchangeInfo['filters'] ['MARKET_LOT_SIZE']['stepSize'] > 0) {
+                $this->exchangeInfo['precision'] = intval(-log($this->exchangeInfo['filters']['MARKET_LOT_SIZE']['stepSize'], 10), 0);
+            }
+        }
     }
 
     /**
@@ -300,6 +312,12 @@ class LakshmiService {
         return $errorBag;
     }
 
+    /**
+     * check if trading is possible
+     *
+     * @param $job
+     * @throws \Exception
+     */
     private function canTrade($job) {
 
         Log::info("Checking if trading is possible ...");
@@ -394,46 +412,43 @@ class LakshmiService {
         //]);
 
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
-
-            // update symbols
-            $this->updateSymbolHistory($job->symbol, $job->timeframe);
-
-            // check if strategy can be triggered now
-            if (!$this->canStrategyTriggeredNow($job)) {
-                continue;
-            }
-
-            /**
-             * 2. canTradeBasic
-             * 3. canTrade
-             * 4. strategy
-             */
-
-            // get available base & quote
-            $this->setAvailableAsset($job);
-
-            // get necassary exchange infos for symbol
-            $this->setExchangeInfos($job->symbol);
-
-            // are we still able to trade?
             try {
+
+                // update symbols
+                $this->updateSymbolHistory($job->symbol, $job->timeframe);
+
+                // check if strategy can be triggered now
+                if (!$this->canStrategyTriggeredNow($job)) {
+                    continue;
+                }
+
+                // get available base & quote
+                $this->setAvailableAsset($job);
+
+                // get necassary exchange infos for symbol
+                $this->setExchangeInfos($job);
+
+                // are we still able to trade?
                 $this->canTrade($job);
+
+                return;
+
+                // get the right strategy
+                $strategyService = app($job->strategy);
+
+                // ok ... let's do it
+                $strategyService->strategy();
+
             } catch (\Exception $e) {
-                Log::info("canTrade() failed ... continue with next job");
+                Log::error($e->getMessage());
+                Log::info("Trading for $job->symbol failed  ... continue with next job");
                 continue;
             }
-
-            return;
-
-            // get the right strategy
-            $strategyService = app($job->strategy);
-
-            // ok ... let's do it
-            $strategyService->strategy();
 
             Log::info("Lakshmi successfully finished checking strategy for job $job->symbol $job->timeframe");
         }
 
+        // all done
         Log::info("Lakshmi has done with trading ;-)");
     }
 }
