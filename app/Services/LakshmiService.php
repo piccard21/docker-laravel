@@ -403,6 +403,7 @@ class LakshmiService {
 
             try {
 
+                Log::info("----------------------------------------");
                 // update symbols
                 $this->updateSymbolHistory($job->symbol, $job->timeframe);
 
@@ -439,7 +440,6 @@ class LakshmiService {
             }
 
             Log::info("Lakshmi finished checking strategy for job $job->symbol $job->timeframe");
-            Log::info("----------------------------------------");
         }
 
         // all done
