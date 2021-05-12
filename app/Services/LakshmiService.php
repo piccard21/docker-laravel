@@ -134,9 +134,9 @@ class LakshmiService {
      * @param $job
      * @return array
      */
-    public function setAvailableAsset($job) {
+    public function setAvailableAsset() {
 
-        Log::info("Getting available asset for job $job->id ($job->symbol/$job->timeframe)");
+        Log::info("Getting available asset for job " . $this->job->id  . "(" . $this->job->symbol."/".$this->job->timeframe.")");
 
         $this->availableAsset = [
             "base" => 0,
@@ -145,10 +145,10 @@ class LakshmiService {
 
         // not active yet OR no logs
         // TODO ... bottleneck ... beim Job anlegen sollte was eingetragen werden?
-        if (!JobLog::count() || ($job->status !== 'ACTIVE' && $job->status !== 'INACTIVE')) {
+        if (!JobLog::whereIn('method', ['BUY', 'SELL'])->count() || ($this->job->status !== 'ACTIVE' && $this->job->status !== 'INACTIVE')) {
             $this->availableAsset = [
                 "base" => 0,
-                "quote" => $job->start_price
+                "quote" => $this->job->start_price
             ];
         } else {
             /**
@@ -170,16 +170,16 @@ class LakshmiService {
              */
 
             // get last job_log
-            $lastJob = $job->logs()->whereIn('method', ['BUY', 'SELL'])->orderBy('time', 'desc')->first();
+            $lastJob = $this->job->logs()->whereIn('method', ['BUY', 'SELL'])->orderBy('time', 'desc')->first();
 
             // should be also valid for inactive jobs
-            if ($job->next === "BUY") {
+            if ($this->job->next === "BUY") {
                 $this->availableAsset = [
                     "base" => 0,
                     "quote" => $lastJob->message["cummulativeQuoteQty"],
                 ];
 
-            } else if ($job->next === "SELL") {
+            } else if ($this->job->next === "SELL") {
                 $this->availableAsset = [
                     "base" => $lastJob->message["executedQty"],
                     "quote" => 0
@@ -187,8 +187,8 @@ class LakshmiService {
             }
         }
 
-        Log::info("- base: " . $this->availableAsset ["base"] . " $job->base");
-        Log::info("- quote: " . $this->availableAsset ["quote"] . " $job->quote");
+        Log::info("- base: " . $this->availableAsset["base"] . " " .$this->job->base);
+        Log::info("- quote: " . $this->availableAsset["quote"] . "  " .$this->job->quote);
     }
 
     /**
@@ -198,18 +198,18 @@ class LakshmiService {
      * @return bool
      * @throws \Exception
      */
-    private function canStrategyTriggeredNow($job) {
+    private function canStrategyTriggeredNow() {
         Log::info("Checking if strategy can be triggered now...");
 
         // TODO ... stimmt das .. .was wenn es zwischenzeitlich einen Ausfall gab
         // prüfen ob es Kerzen danach gibt
         // wenn ja auf WIATING/READY umstellen?
 
-        $symbolModel = Symbol::setCollection($job->symbol);
+        $symbolModel = Symbol::setCollection($this->job->symbol);
 
         $entry = $symbolModel->where([
-            ['time', '<=', $job->lastTimeTriggered],
-            ['close_time', '>=', $job->lastTimeTriggered]
+            ['time', '<=', $this->job->lastTimeTriggered],
+            ['close_time', '>=', $this->job->lastTimeTriggered]
         ])->first();
 
         if (empty($entry)) {
@@ -232,13 +232,13 @@ class LakshmiService {
         return true;
     }
 
-    private function setExchangeInfos($job) {
+    private function setExchangeInfos() {
         // all info
         $this->exchangeInfo['all'] = $this->exchangeService->exchangeInfo();
 
         // specific for the symbol
         foreach ($this->exchangeInfo['all']["symbols"] as $exSymbol) {
-            if ($exSymbol["symbol"] === $job->symbol) {
+            if ($exSymbol["symbol"] === $this->job->symbol) {
                 $this->exchangeInfo['symbolinfo'] = $exSymbol;
                 break;
             }
@@ -260,7 +260,7 @@ class LakshmiService {
         $this->exchangeInfo['accountInfo'] = $this->exchangeService->accountInfo();
 
         // precision
-        if ($job->next === 'BUY') {
+        if ($this->job->next === 'BUY') {
             // tick
             $this->exchangeInfo['precision'] = intval(-log($this->exchangeInfo['filters']['PRICE_FILTER']['tickSize'], 10), 0);
 
@@ -321,7 +321,7 @@ class LakshmiService {
      * @param $job
      * @throws \Exception
      */
-    private function canTrade($job) {
+    private function canTrade() {
 
         Log::info("Checking if trading is possible ...");
 
@@ -334,47 +334,47 @@ class LakshmiService {
         // check filters
         // MIN_NOTIONAL
         if (
-            $job->next === 'BUY' &&
+            $this->job->next === 'BUY' &&
             $this->availableAsset["quote"] < $this->exchangeInfo['filters']['MIN_NOTIONAL']['minNotional']
         ) {
-            $errorBag->add('filter-min_notional-BUY', "Not enough " . $job->quote . " in spot wallet");
+            $errorBag->add('filter-min_notional-BUY', "Not enough " . $this->job->quote . " in spot wallet");
         }
 
         // MARKET_LOT_SIZE
 
         // max of base
         if (
-            $job->next === 'SELL' &&
+            $this->job->next === 'SELL' &&
             $this->availableAsset["base"] > $this->exchangeInfo['filters']['MARKET_LOT_SIZE']['maxQty']
         ) {
             $errorBag->add('filter-market_lot_size-SELL-too-much',
-                "Too much " . $job->base . " inside spot wallet for selling.");
+                "Too much " . $this->job->base . " inside spot wallet for selling.");
 
         }
         // min base
         if (
-            $job->next === 'SELL' &&
+            $this->job->next === 'SELL' &&
             $this->availableAsset["base"] < $this->exchangeInfo['filters']['MARKET_LOT_SIZE']['minQty']
         ) {
             $errorBag->add('filter-market_lot_size-SELL-too-less',
-                "Too less " . $job->base . " inside spot wallet for selling.");
+                "Too less " . $this->job->base . " inside spot wallet for selling.");
 
         }
 
         // LOT_SIZE
         if (
-            $job->next === 'SELL' &&
+            $this->job->next === 'SELL' &&
             $this->availableAsset["base"] > $this->exchangeInfo['filters']['LOT_SIZE']['maxQty']
         ) {
-            $errorBag->add('filter-lot_size-SELL-too-much', "Too much " . $job->base . " inside spot wallet for selling.");
+            $errorBag->add('filter-lot_size-SELL-too-much', "Too much " . $this->job->base . " inside spot wallet for selling.");
 
         }
         // min base
         if (
-            $job->next === 'SELL' &&
+            $this->job->next === 'SELL' &&
             $this->availableAsset["base"] < $this->exchangeInfo['filters']['LOT_SIZE']['minQty']
         ) {
-            $errorBag->add('filter-lot_size-SELL-too-less', "Too less " . $job->base . " inside spot wallet for selling.");
+            $errorBag->add('filter-lot_size-SELL-too-less', "Too less " . $this->job->base . " inside spot wallet for selling.");
 
         }
 
@@ -387,6 +387,12 @@ class LakshmiService {
         } else {
             Log::info("Trading check passed successfully");
         }
+    }
+
+
+
+    private function triggerTrade() {
+            Log::info("TRADDDDE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
 
     public function trade() {
@@ -422,24 +428,26 @@ class LakshmiService {
                 $this->updateSymbolHistory($job->symbol, $job->timeframe);
 
                 // check if strategy can be triggered now
-                if (!$this->canStrategyTriggeredNow($job)) {
+                if (!$this->canStrategyTriggeredNow()) {
                     continue;
                 }
 
                 // get available base & quote
-                $this->setAvailableAsset($job);
+                $this->setAvailableAsset();
 
                 // get necassary exchange infos
-                $this->setExchangeInfos($job);
+                $this->setExchangeInfos();
 
                 // are we still able to trade?
-                $this->canTrade($job);
+                $this->canTrade();
 
                 // get the right strategy
                 $strategyService = app($job->strategy);
 
                 // ok ... let's do it
-                $strategyService->strategy();
+                if ($strategyService->strategy()) {
+                    $this->triggerTrade();
+                }
 
             } catch (\Exception $e) {
                 Log::error($e->getMessage());

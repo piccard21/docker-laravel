@@ -23,6 +23,12 @@ class StrategyEmaCrossService {
         $this->lakshmiService = app(LakshmiService::class);
     }
 
+    /**
+     * The real strategy
+     *
+     * @return bool
+     * @throws \Exception
+     */
     public function strategy() {
 
         Log::info("Checking strategy ...");
@@ -34,15 +40,16 @@ class StrategyEmaCrossService {
         $this->end1 = end($this->emas["ema1"]);
         $this->end2 = end($this->emas["ema2"]);
 
+        Log::info("EMA values  for " . $this->lakshmiService->job->symbol . " are " . $this->end1["value"] . " " .
+            $this->end2["value"]);
+
         // job still isn't active ... set status
         if ($this->lakshmiService->job->status !== 'ACTIVE') {
-            $this->checkStatus();
-
-        } // job is active ... trade
+            return $this->checkStatus();
+        } // job is active ... check if we can buy or sell
         else {
-
+            return $this->canTriggerTrade();
         }
-
     }
 
     private function getEma1() {
@@ -102,10 +109,7 @@ class StrategyEmaCrossService {
     }
 
     private function checkStatus() {
-
         Log::info("Job for " . $this->lakshmiService->job->symbol . " isn't ACTIVE ... checking if status can change ...");
-        Log::info("EMA values  for " . $this->lakshmiService->job->symbol . " are " . $this->end1["value"] . " " .
-            $this->end2["value"]);
 
         // BUY
         if ($this->lakshmiService->job->next === "BUY") {
@@ -161,6 +165,8 @@ class StrategyEmaCrossService {
         }
 
         $this->lakshmiService->job->save();
+
+        return $this->lakshmiService->job->status === 'ACTIVE';
     }
 
     /**
@@ -179,5 +185,31 @@ class StrategyEmaCrossService {
             'time' => Carbon::now(),
             'job_id' => $this->lakshmiService->job->id
         ]);
+    }
+
+    /**
+     * The core of the strategy
+     *
+     * @return bool
+     * @throws \Exception
+     */
+    private function canTriggerTrade() {
+        if ($this->lakshmiService->job->next === "BUY") {
+            if ($this->end1 <= $this->end2) {
+                Log::info("EMAs haven't crossed ... do nothing");
+                return false;
+            } else {
+                Log::info("EMAs have crossed ... BUY");
+                return true;
+            }
+        } else {
+            if ($this->end1 >= $this->end2) {
+                Log::info("EMAs haven't crossed ... do nothing");
+                return false;
+            } else {
+                Log::info("EMAs have crossed ... SELL");
+                return true;
+            }
+        }
     }
 }
