@@ -110,6 +110,7 @@ class StrategyEmaCrossService {
 
     private function checkStatus() {
         Log::info("Job for " . $this->lakshmiService->job->symbol . " isn't ACTIVE ... checking if status can change ...");
+        Log::info("Going to check if status can be changed ...");
 
         // BUY
         if ($this->lakshmiService->job->next === "BUY") {
@@ -123,7 +124,7 @@ class StrategyEmaCrossService {
                 } else {
                     $this->lakshmiService->job->status = "READY";
 
-                    $msg = "job status for " . $this->lakshmiService->job->id . "set to READY";
+                    $msg = "job status for " . $this->lakshmiService->job->id . " set to READY";
                     $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
                 }
             } else if ($this->lakshmiService->job->status === 'READY') {

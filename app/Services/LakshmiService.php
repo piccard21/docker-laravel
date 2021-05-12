@@ -439,6 +439,7 @@ class LakshmiService {
             }
 
             Log::info("Lakshmi finished checking strategy for job $job->symbol $job->timeframe");
+            Log::info("----------------------------------------");
         }
 
         // all done
