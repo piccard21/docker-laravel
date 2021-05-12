@@ -219,8 +219,11 @@ class LakshmiService {
      * @param string $msg
      * @param string $type
      */
-    public function log(string $msg, $method, $type) {
-        Log::info($msg);
+    public function log($msg, $method, $type) {
+
+        if(!is_array($msg)) {
+            Log::info($msg);
+        }
 
         JobLog::create([
             'method' => $method,
@@ -442,7 +445,8 @@ class LakshmiService {
                 $msg =
                     "Successfully bought " . $response['executedQty'] . " of  " . $this->job->base . " (JOBID: " . $this->job->id .
                     ")";
-                $this->log($msg, 'BUY', 'SUCCESS');
+                Log::info($msg);
+                $this->log($response, 'BUY', 'SUCCESS');
 
                 $this->job->lastTimeTriggered = intval(Carbon::now()->getPreciseTimestamp(3));
                 $this->job->next = "SELL";
@@ -476,7 +480,8 @@ class LakshmiService {
             else {
                 $msg = "Successfully sold " . $response['executedQty'] . " of  " . $this->job->base . " (JOBID: " . $this->job->id .
                     ")";
-                $this->log($msg, 'SELL', 'SUCCESS');
+                Log::info($msg);
+                $this->log($response, 'SELL', 'SUCCESS');
 
                 $this->job->next = "BUY";
                 $this->job->lastTimeTriggered = intval(Carbon::now()->getPreciseTimestamp(3));
