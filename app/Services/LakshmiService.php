@@ -13,11 +13,9 @@ use Illuminate\Support\MessageBag;
 class LakshmiService {
 
     public $availableAsset = [];
-    public $exchangeService;
     public $exchangeInfo = [];
+    public $exchangeService;
     public $job;
-
-    //protected $accountInfo;
 
     public function __construct() {
         $this->exchangeService = app(BinanceApiService::class);
