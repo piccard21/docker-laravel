@@ -40,7 +40,7 @@ class StrategyEmaCrossService {
         $this->end1 = end($this->emas["ema1"]);
         $this->end2 = end($this->emas["ema2"]);
 
-        Log::info("EMA values  for " . $this->lakshmiService->job->symbol . " are " . $this->end1["value"] . " " .
+        Log::info("EMA values for " . $this->lakshmiService->job->symbol . " are " . $this->end1["value"] . " " .
             $this->end2["value"]);
 
         // job still isn't active ... set status
