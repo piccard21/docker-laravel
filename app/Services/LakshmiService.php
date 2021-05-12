@@ -12,9 +12,10 @@ use Illuminate\Support\MessageBag;
 
 class LakshmiService {
 
-    protected $exchangeService;
+    public $availableAsset = [];
+    public $exchangeService;
     public $exchangeInfo = [];
-    protected $availableAsset = [];
+    public $job;
 
     //protected $accountInfo;
 
@@ -412,6 +413,7 @@ class LakshmiService {
         //]);
 
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
+            $this->job = $job;
             try {
 
                 // update symbols
@@ -425,13 +427,11 @@ class LakshmiService {
                 // get available base & quote
                 $this->setAvailableAsset($job);
 
-                // get necassary exchange infos for symbol
+                // get necassary exchange infos
                 $this->setExchangeInfos($job);
 
                 // are we still able to trade?
                 $this->canTrade($job);
-
-                return;
 
                 // get the right strategy
                 $strategyService = app($job->strategy);
@@ -441,7 +441,7 @@ class LakshmiService {
 
             } catch (\Exception $e) {
                 Log::error($e->getMessage());
-                Log::info("Trading for $job->symbol failed  ... continue with next job");
+                Log::error("Trading for $job->symbol failed  ... continue with next job");
                 continue;
             }
 

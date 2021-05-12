@@ -14,7 +14,7 @@ class LakshmiServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->bind(LakshmiService::class, function ($app) {
+        $this->app->singleton(LakshmiService::class, function ($app) {
             return new LakshmiService();
         });
     }
