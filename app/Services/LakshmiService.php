@@ -30,7 +30,7 @@ class LakshmiService {
      * @return bool
      * @throws \Exception
      */
-    private function canStrategyTriggeredNow() {
+    private function isJobOnTime() {
         Log::info("Checking if strategy can be triggered now...");
 
         // TODO ... stimmt das .. .was wenn es zwischenzeitlich einen Ausfall gab
@@ -408,7 +408,7 @@ class LakshmiService {
                 $this->updateSymbolHistory($job->symbol, $job->timeframe);
 
                 // check if strategy can be triggered now
-                if (!$this->canStrategyTriggeredNow()) {
+                if (!$this->isJobOnTime()) {
                     continue;
                 }
 
