@@ -391,6 +391,12 @@ class LakshmiService {
         //    "user_id" => 1
         //]);
 
+        /**
+         * TODO
+         *  - wenn neuer Job, dann auch sofort prüfen ob man auf READY umschalten kann
+         * - hierfür eine gernerelle update-Methode des service, die public ist
+         */
+
 
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
             $this->job = $job;

@@ -25,6 +25,31 @@ class StrategyEmaCrossService {
     }
 
     /**
+     * The real strategy
+     *
+     * @return bool
+     * @throws \Exception
+     */
+    public function strategy() {
+
+        Log::info("Checking strategy ...");
+
+        $this->updateEmas();
+
+        $this->setCurrentEmas();
+
+        // job still isn't active ... set status
+        if ($this->lakshmiService->job->status !== 'ACTIVE') {
+            return $this->checkStatus();
+        } // job is active ... check if we can buy or sell
+        else {
+            return $this->canTriggerTrade();
+        }
+    }
+
+
+
+    /**
      * The core of the strategy
      *
      * @return bool
@@ -114,29 +139,6 @@ class StrategyEmaCrossService {
         return $this->lakshmiService->job->status === 'ACTIVE';
     }
 
-    /**
-     * The real strategy
-     *
-     * @return bool
-     * @throws \Exception
-     */
-    public function strategy() {
-
-        Log::info("Checking strategy ...");
-
-        $this->updateEmas();
-
-        $this->setCurrentEmas();
-
-        // job still isn't active ... set status
-        if ($this->lakshmiService->job->status !== 'ACTIVE') {
-            return $this->checkStatus();
-        } // job is active ... check if we can buy or sell
-        else {
-            return $this->canTriggerTrade();
-        }
-    }
-
     private function setEmaModel() {
         Log::info("Setting up EMA model");
 
@@ -197,26 +199,38 @@ class StrategyEmaCrossService {
 
         // calc emas & insert into DB
         $klines->chunk(1000, function($klinesChunk) {
+            Log::info("Updating EMAs ... CHUNK");
+
             $closePrices = $klinesChunk->pluck('close')->toArray();
 
             // TODO ... TOTAL BRAINFUCK!!!!
+            /**
+             * Because trader_ema omits the first candles, like the range was set,
+             * we don't get any data for this region.
+             * The data volume we get is simply too much, so we operate with chunks.
+             * And that's why we get gaps always at the beginning.
+             *
+             * This is why we shift the last close prices, in the same high like the EMAs
+             * would omit, to the beginning of the chunk close prices.
+             *
+             * Afterwards we have to pick the right candle, for getting the ema.
+             */
             $emasRaw = [];
             foreach ([$this->getEma1Setting(), $this->getEma2Setting()] as $range) {
-                $emaBevor = $this->symbolModel->where([
+                $closePricesBefore = $this->symbolModel->where([
                     "symbol" => $this->lakshmiService->job->symbol,
-                    "timeframe" => $this->lakshmiService->job->timeframe,
-                    "ema1" => $this->getEma1Setting(),
-                    "ema2" => $this->getEma2Setting(),
+                    "timeframe" => $this->lakshmiService->job->timeframe
                 ])
                     ->where('time', '<', $klinesChunk->first()->time)
                     ->orderBy('time', 'desc')
                     ->limit($range)
                     ->pluck('close');
 
-                foreach ($emaBevor as $davor) {
-                    array_unshift($closePrices, $davor);
+                foreach ($closePricesBefore as $closePrice) {
+                    array_unshift($closePrices, $closePrice);
                 }
                 $emasRaw[$range] = trader_ema($closePrices, $range);
+                $a = 1;
             }
 
             $tmp = [];
