@@ -23,7 +23,7 @@
                                 <tr>
                                     <td>{{ $log["id"] }}</td>
                                     <td>{{ $log["method"] }}</td>
-                                    <td class="@if($log["type"] === 'SUCCESS') table-success @else table-danger @endif">{{ $log["type"] }}</td>
+                                    <td class="@if($log["type"] === 'SUCCESS') table-success @elseif ($log["type"] === 'INFO') table-primary @elseif ($log["type"] === 'WARNING') table-warning @else table-danger @endif">{{ $log["type"] }}</td>
                                     <td>{{ $log["message"] }}</td>
                                     <td>{{ $log["time"] }}</td>
                                 </tr>

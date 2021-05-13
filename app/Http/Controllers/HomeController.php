@@ -62,7 +62,7 @@ class HomeController extends Controller {
 
         return view('show', [
             "job" => $job,
-            "logs" => $job->logs()->get()->toArray()
+            "logs" => $job->logs()->orderBy('time', 'desc')->get()->toArray()
         ]);
     }
 }
