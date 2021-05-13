@@ -118,11 +118,6 @@ class StrategyEmaCrossService {
 
         Log::info("Checking strategy ...");
 
-        /**
-         * TODO
-         *  - nur die letzten 2 Werte end1/end2
-         */
-
         $this->setCurrentEmas();
 
         // job still isn't active ... set status
