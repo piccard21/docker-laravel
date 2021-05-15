@@ -364,6 +364,112 @@ class LakshmiService {
     }
 
     /**
+     * sets the right status if job isn't active
+     *
+     * @param $strategyService
+     */
+    private function checkStatus($strategyService) {
+        Log::info("Job for " . $this->job->symbol . " isn't ACTIVE");
+        Log::info("Going to check if status can be changed");
+
+        // BUY
+        if ($this->job->next === "BUY") {
+            Log::info("Next action for job " . $this->job->id . " is BUY");
+
+            if ($this->job->status === 'WAITING') {
+                Log::info("Job status for " . $this->job->id . " is WAITING");
+
+                if ($strategyService->check()) {
+                    //if ($this->currentEmas["ema1"] >= $this->currentEmas["ema2"]) {
+                    $this->job->status = "WAITING";
+                } else {
+                    $this->job->status = "READY";
+
+                    $msg = "job status for " . $this->job->id . " set to READY";
+                    $this->log($msg, 'STRATEGY', 'INFO');
+                }
+            } else if ($this->job->status === 'READY') {
+                Log::info("Job status for job " . $this->job->id . " is READY");
+
+                if ($strategyService->check()) {
+                    //if ($this->currentEmas["ema1"] >= $this->currentEmas["ema2"]) {
+                    $this->job->status = "ACTIVE";
+
+                    $msg = "Job status for " . $this->job->id . " set to ACTIVE";
+                    $this->log($msg, 'STRATEGY', 'INFO');
+                } else {
+                    $this->job->status = "READY";
+                }
+            }
+
+        } // SELL
+        else {
+            Log::info("Next job for $this->job->id is BUY");
+
+            if ($this->job->status === 'WAITING') {
+                if (!$strategyService->check()) {
+                    //if ($this->currentEmas["ema1"] <= $this->currentEmas["ema2"]) {
+                    $this->job->status = "WAITING";
+                } else {
+                    $this->job->status = "READY";
+
+                    $msg = "job for " . $this->job->symbol . " set to status READY";
+                    $this->log($msg, 'STRATEGY', 'INFO');
+                }
+            } else if ($this->job->status === 'READY') {
+                if (!$strategyService->check()) {
+                    //if ($this->currentEmas["ema1"] <= $this->currentEmas["ema2"]) {
+                    $this->job->status = "ACTIVE";
+
+                    $msg = "job for " . $this->job->symbol . " set to status ACTIVE";
+                    $this->log($msg, 'STRATEGY', 'INFO');
+                } else {
+                    $this->job->status = "READY";
+                }
+            }
+        }
+
+        $this->job->save();
+
+    }
+
+    /**
+     * set status or trade
+     */
+    private function strategy() {
+
+        // get the right strategy
+        $strategyService = app($this->job->strategy);
+
+        // job still isn't active ... set status
+        if ($this->job->status !== 'ACTIVE') {
+            $this->checkStatus($strategyService);
+        }
+
+        // job is active ... check if we can buy or sell
+        if ($this->job->status === 'ACTIVE') {
+
+            Log::info("Checking if trade can be triggered");
+
+            if ($this->job->next === "BUY") {
+                if (!$strategyService->check()) {
+                    Log::info("Strategy hasn't triggered ... do nothing");
+                } else {
+                    Log::info("Strategy triggered... BUY");
+                    $this->triggerTrade();
+                }
+            } else {
+                if ($strategyService->check()) {
+                    Log::info("Strategy hasn't triggered ... do nothing");
+                } else {
+                    Log::info("Strategy triggered... SELL");
+                    $this->triggerTrade();
+                }
+            }
+        }
+    }
+
+    /**
      * this one has to be used by the cron job
      */
     public function trade() {
@@ -397,7 +503,6 @@ class LakshmiService {
          * - hierfür eine gernerelle update-Methode des service, die public ist
          */
 
-
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
             $this->job = $job;
 
@@ -427,13 +532,8 @@ class LakshmiService {
                 // does the exchanges service allow us to trade
                 $this->canTrade();
 
-                // get the right strategy
-                $strategyService = app($job->strategy);
-
-                // ok ... let's do it
-                if ($strategyService->strategy()) {
-                    $this->triggerTrade();
-                }
+                // check the strategy
+                $this->strategy();
 
                 // set time, so it won't be triggered every time
                 $this->job->lastTimeTriggered = intval(Carbon::now()->getPreciseTimestamp(3));
@@ -598,7 +698,7 @@ class LakshmiService {
         Log::info("- close time: " . $closeTimeFormatted . " (" . $last["close_time"] . ")");
     }
 
-    public function setJob (Job $job) {
+    public function setJob(Job $job) {
         $this->job = $job;
     }
 }

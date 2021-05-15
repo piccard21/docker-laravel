@@ -15,10 +15,15 @@ class StrategyEmaCrossService {
     private $emaModel;
 
     public function __construct() {
-        //$this->exchangeService = app(BinanceApiService::class);
+        $this->init();
+    }
+
+    private function init() {
         $this->lakshmiService = app(LakshmiService::class);
         $this->symbolModel = Symbol::setCollection($this->lakshmiService->job->symbol);
         $this->setEmaModel();
+        $this->updateEmas();
+        $this->setCurrentEmas();
     }
 
     /**
@@ -27,115 +32,17 @@ class StrategyEmaCrossService {
      * @return bool
      * @throws \Exception
      */
-    public function strategy() {
+    public function check() {
 
         Log::info("Checking strategy ...");
 
-        $this->updateEmas();
-
-        $this->setCurrentEmas();
-
-        // job still isn't active ... set status
-        if ($this->lakshmiService->job->status !== 'ACTIVE') {
-            return $this->checkStatus();
-        } // job is active ... check if we can buy or sell
-        else {
-            return $this->canTriggerTrade();
-        }
-    }
-
-    /**
-     * The core of the strategy
-     *
-     * @return bool
-     * @throws \Exception
-     */
-    private function canTriggerTrade() {
-        Log::info("Checking if trade can be triggered");
-
-        if ($this->lakshmiService->job->next === "BUY") {
-            if ($this->currentEmas["ema1"] <= $this->currentEmas["ema2"]) {
-                Log::info("EMAs haven't crossed ... do nothing");
-                return false;
-            } else {
-                Log::info("EMAs have crossed ... BUY");
-                return true;
-            }
+        if ($this->currentEmas["ema1"] <= $this->currentEmas["ema2"]) {
+            Log::info("EMA1 is below EMA2");
+            return false;
         } else {
-            if ($this->currentEmas["ema1"] >= $this->currentEmas["ema2"]) {
-                Log::info("EMAs haven't crossed ... do nothing");
-                return false;
-            } else {
-                Log::info("EMAs have crossed ... SELL");
-                return true;
-            }
+            Log::info("EMA1 is above EMA2");
+            return true;
         }
-    }
-
-    /**
-     * if job isn't active yet, this function tries to set the right status
-     * @return bool
-     */
-    private function checkStatus() {
-        Log::info("Job for " . $this->lakshmiService->job->symbol . " isn't ACTIVE");
-        Log::info("Going to check if status can be changed");
-
-        // BUY
-        if ($this->lakshmiService->job->next === "BUY") {
-            Log::info("Next action for job " . $this->lakshmiService->job->id . " is BUY");
-
-            if ($this->lakshmiService->job->status === 'WAITING') {
-                Log::info("Job status for " . $this->lakshmiService->job->id . " is WAITING");
-
-                if ($this->currentEmas["ema1"] >= $this->currentEmas["ema2"]) {
-                    $this->lakshmiService->job->status = "WAITING";
-                } else {
-                    $this->lakshmiService->job->status = "READY";
-
-                    $msg = "job status for " . $this->lakshmiService->job->id . " set to READY";
-                    $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
-                }
-            } else if ($this->lakshmiService->job->status === 'READY') {
-                Log::info("Job status for job " . $this->lakshmiService->job->id . " is READY");
-
-                if ($this->currentEmas["ema1"] >= $this->currentEmas["ema2"]) {
-                    $this->lakshmiService->job->status = "ACTIVE";
-
-                    $msg = "Job status for " . $this->lakshmiService->job->id . " set to ACTIVE";
-                    $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
-                } else {
-                    $this->lakshmiService->job->status = "READY";
-                }
-            }
-
-        } // SELL
-        else {
-            Log::info("Next job for $this->lakshmiService->job->id is BUY");
-
-            if ($this->lakshmiService->job->status === 'WAITING') {
-                if ($this->currentEmas["ema1"] <= $this->currentEmas["ema2"]) {
-                    $this->lakshmiService->job->status = "WAITING";
-                } else {
-                    $this->lakshmiService->job->status = "READY";
-
-                    $msg = "job for " . $this->lakshmiService->job->symbol . " set to status READY";
-                    $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
-                }
-            } else if ($this->lakshmiService->job->status === 'READY') {
-                if ($this->currentEmas["ema1"] <= $this->currentEmas["ema2"]) {
-                    $this->lakshmiService->job->status = "ACTIVE";
-
-                    $msg = "job for " . $this->lakshmiService->job->symbol . " set to status ACTIVE";
-                    $this->lakshmiService->log($msg, 'STRATEGY', 'INFO');
-                } else {
-                    $this->lakshmiService->job->status = "READY";
-                }
-            }
-        }
-
-        $this->lakshmiService->job->save();
-
-        return $this->lakshmiService->job->status === 'ACTIVE';
     }
 
     /**
