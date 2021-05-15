@@ -24,47 +24,6 @@ class LakshmiService {
     }
 
     /**
-     * checks if startegy can be triggered now
-     *
-     * @param $job
-     * @return bool
-     * @throws \Exception
-     */
-    private function isJobOnTime() {
-        Log::info("Checking if strategy can be triggered now...");
-
-        // TODO ... stimmt das .. .was wenn es zwischenzeitlich einen Ausfall gab
-        // prüfen ob es Kerzen danach gibt
-        // wenn ja auf WAITING/READY umstellen?
-
-        $symbolModel = Symbol::setCollection($this->job->symbol);
-
-        $entry = $symbolModel->where([
-            ['time', '<=', $this->job->lastTimeTriggered],
-            ['close_time', '>=', $this->job->lastTimeTriggered]
-        ])->first();
-
-        if (empty($entry)) {
-            throw new \Exception("Cannot find symbol entry");
-        }
-        $closeTime = Carbon::createFromTimestamp($entry->close_time / 1000);
-        if ($closeTime->greaterThan(Carbon::now())) {
-            $lastEntryCloseTimeNice = Carbon::createFromTimestamp(intval($entry->close_time / 1000))
-                ->addSecond()
-                ->format('Y-m-d H:i:s');
-
-            Log::info("Too early for triggering strategy ...");
-            Log::info("Next candle will appear at $lastEntryCloseTimeNice");
-
-            return false;
-        }
-
-        Log::info("Strategy can be triggered");
-
-        return true;
-    }
-
-    /**
      * check if trading is possible
      *
      * @param $job
@@ -181,6 +140,47 @@ class LakshmiService {
         }
 
         return $errorBag;
+    }
+
+    /**
+     * checks if startegy can be triggered now
+     *
+     * @param $job
+     * @return bool
+     * @throws \Exception
+     */
+    private function isJobOnTime() {
+        Log::info("Checking if strategy can be triggered now...");
+
+        // TODO ... stimmt das .. .was wenn es zwischenzeitlich einen Ausfall gab
+        // prüfen ob es Kerzen danach gibt
+        // wenn ja auf WAITING/READY umstellen?
+
+        $symbolModel = Symbol::setCollection($this->job->symbol);
+
+        $entry = $symbolModel->where([
+            ['time', '<=', $this->job->lastTimeTriggered],
+            ['close_time', '>=', $this->job->lastTimeTriggered]
+        ])->first();
+
+        if (empty($entry)) {
+            throw new \Exception("Cannot find symbol entry");
+        }
+        $closeTime = Carbon::createFromTimestamp($entry->close_time / 1000);
+        if ($closeTime->greaterThan(Carbon::now())) {
+            $lastEntryCloseTimeNice = Carbon::createFromTimestamp(intval($entry->close_time / 1000))
+                ->addSecond()
+                ->format('Y-m-d H:i:s');
+
+            Log::info("Too early for triggering strategy ...");
+            Log::info("Next candle will appear at $lastEntryCloseTimeNice");
+
+            return false;
+        }
+
+        Log::info("Strategy can be triggered");
+
+        return true;
     }
 
     /**
@@ -377,7 +377,7 @@ class LakshmiService {
             Log::info("Next action for job " . $this->job->id . " is BUY");
 
             if ($this->job->status === 'WAITING') {
-                Log::info("Job status for " . $this->job->id . " is WAITING");
+                Log::info("Status for job " . $this->job->id . " is WAITING");
 
                 if ($strategyService->check()) {
                     //if ($this->currentEmas["ema1"] >= $this->currentEmas["ema2"]) {
@@ -385,17 +385,17 @@ class LakshmiService {
                 } else {
                     $this->job->status = "READY";
 
-                    $msg = "job status for " . $this->job->id . " set to READY";
+                    $msg = "Status for job " . $this->job->id . " set to READY";
                     $this->log($msg, 'STRATEGY', 'INFO');
                 }
             } else if ($this->job->status === 'READY') {
-                Log::info("Job status for job " . $this->job->id . " is READY");
+                Log::info("Status for job " . $this->job->id . " is READY");
 
                 if ($strategyService->check()) {
                     //if ($this->currentEmas["ema1"] >= $this->currentEmas["ema2"]) {
                     $this->job->status = "ACTIVE";
 
-                    $msg = "Job status for " . $this->job->id . " set to ACTIVE";
+                    $msg = "Status for job " . $this->job->id . " set to ACTIVE";
                     $this->log($msg, 'STRATEGY', 'INFO');
                 } else {
                     $this->job->status = "READY";
