@@ -243,11 +243,8 @@ class StrategyEmaCrossService {
                 $emasRaw = array_values(trader_ema($closePrices, $emaRange));
 
                 $tmp = [];
-
                 foreach ($klinesChunk as $nr => $chunk) {
-
                     $emaValue = isset($emasRaw[$nr]) ? $emasRaw[$nr] : null;
-
                     $tmp[] = [
                         "symbol" => $chunk->symbol,
                         "timeframe" => $chunk->timeframe,
