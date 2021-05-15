@@ -47,8 +47,6 @@ class StrategyEmaCrossService {
         }
     }
 
-
-
     /**
      * The core of the strategy
      *
@@ -174,86 +172,96 @@ class StrategyEmaCrossService {
     private function updateEmas() {
         Log::info("Updating EMAs ...");
 
-        // get last entry
-        $lastOpenTime = 1502942400000;
-        $last = $this->emaModel
-            ->where([
-                "symbol" => $this->lakshmiService->job->symbol,
-                "timeframe" => $this->lakshmiService->job->timeframe,
-                "ema1" => $this->getEma1Setting(),
-                "ema2" => $this->getEma2Setting(),
-            ])
-            ->orderBy('open_time', 'desc')->first();
-        if ($last) {
-            $lastOpenTime = $last->open_time;
-            $last->delete();
-        }
+        foreach ([$this->getEma1Setting(), $this->getEma2Setting()] as $emaRange) {
 
-        // get klines from last entry on
-        $klines = $this->symbolModel->where([
-            "symbol" => $this->lakshmiService->job->symbol,
-            "timeframe" => $this->lakshmiService->job->timeframe
-        ])
-            ->where('time', '>=', $lastOpenTime)
-            ->orderBy('time', 'asc');
-
-        // calc emas & insert into DB
-        $klines->chunk(1000, function($klinesChunk) {
-            Log::info("Updating EMAs ... CHUNK");
-
-            $closePrices = $klinesChunk->pluck('close')->toArray();
-
-            // TODO ... TOTAL BRAINFUCK!!!!
-            /**
-             * Because trader_ema omits the first candles, like the range was set,
-             * we don't get any data for this region.
-             * The data volume we get is simply too much, so we operate with chunks.
-             * And that's why we get gaps always at the beginning.
-             *
-             * This is why we shift the last close prices, in the same high like the EMAs
-             * would omit, to the beginning of the chunk close prices.
-             *
-             * Afterwards we have to pick the right candle, for getting the ema.
-             */
-            $emasRaw = [];
-            foreach ([$this->getEma1Setting(), $this->getEma2Setting()] as $range) {
-                $closePricesBefore = $this->symbolModel->where([
+            // EMA: last entry
+            $lastEmaOpenTime = null;
+            $lastEma = $this->emaModel
+                ->where([
                     "symbol" => $this->lakshmiService->job->symbol,
-                    "timeframe" => $this->lakshmiService->job->timeframe
+                    "timeframe" => $this->lakshmiService->job->timeframe,
+                    "ema" => $emaRange
                 ])
-                    ->where('time', '<', $klinesChunk->first()->time)
-                    ->orderBy('time', 'desc')
-                    ->limit($range)
-                    ->pluck('close');
+                ->orderBy('open_time', 'desc')->first();
 
-                foreach ($closePricesBefore as $closePrice) {
-                    array_unshift($closePrices, $closePrice);
+            // delete the last one
+            if ($lastEma) {
+                $lastEmaOpenTime = $lastEma->open_time;
+                $lastEma->delete();
+            }
+
+            // KLINES: from the last EMA entry on
+            $klines = $this->symbolModel->where([
+                "symbol" => $this->lakshmiService->job->symbol,
+                "timeframe" => $this->lakshmiService->job->timeframe
+            ])
+                ->when($lastEmaOpenTime, function($query) use ($lastEmaOpenTime) {
+                    $query->where('time', '>=', $lastEmaOpenTime);
+                })
+                ->orderBy('time', 'asc');
+
+            // calc emas & insert into DB
+            $chunkSize = 1000;
+            $klines->chunk($chunkSize, function($klinesChunk) use ($emaRange) {
+
+                Log::info("Updating EMA $emaRange ... CHUNK");
+
+                // candle close prices
+                $closePrices = $klinesChunk->pluck('close')->toArray();
+
+                // check if there's already an entry in EMA DB
+                $emaAlreadyExists = $this->emaModel
+                    ->where([
+                        "symbol" => $this->lakshmiService->job->symbol,
+                        "timeframe" => $this->lakshmiService->job->timeframe,
+                        "ema" => $emaRange,
+                    ])
+                    ->orderBy('open_time', 'desc')->first();
+
+
+                $emasBefore = null;
+
+                // if there are already calculated EMAs, use them to fill the gap
+                if ($emaAlreadyExists) {
+                    $emasBefore = $this->emaModel->where([
+                        "symbol" => $this->lakshmiService->job->symbol,
+                        "timeframe" => $this->lakshmiService->job->timeframe,
+                        "ema" => $emaRange
+                    ])
+                        ->where('open_time', '<', $klinesChunk->first()->time)
+                        ->where('value', '<>', null)
+                        ->orderBy('time', 'desc')
+                        ->limit($emaRange-1)
+                        ->pluck('value');
+
+                    // TODO ... -1???
+                    foreach ($emasBefore as $eb) {
+                        array_unshift($closePrices, $eb);
+                    }
                 }
-                $emasRaw[$range] = trader_ema($closePrices, $range);
-                $a = 1;
-            }
 
-            $tmp = [];
-            foreach ($klinesChunk as $key => $chunk) {
+                $emasRaw = array_values(trader_ema($closePrices, $emaRange));
 
-                $ema1Value = isset($emasRaw[$this->getEma1Setting()][$key]) ? $emasRaw[$this->getEma1Setting()][$key] : null;
-                $ema2Value = isset($emasRaw[$this->getEma2Setting()][$key]) ? $emasRaw[$this->getEma2Setting()][$key] : null;
+                $tmp = [];
 
-                $tmp[] = [
-                    "symbol" => $chunk->symbol,
-                    "timeframe" => $chunk->timeframe,
-                    'open_time' => $chunk->time,
-                    'ema1' => $this->getEma1Setting(),
-                    'ema2' => $this->getEma2Setting(),
-                    'value1' => $ema1Value,
-                    'value2' => $ema2Value
-                ];
-            }
+                foreach ($klinesChunk as $nr => $chunk) {
 
-            $this->emaModel->insert($tmp);
+                    $emaValue = isset($emasRaw[$nr]) ? $emasRaw[$nr] : null;
 
-        });
+                    $tmp[] = [
+                        "symbol" => $chunk->symbol,
+                        "timeframe" => $chunk->timeframe,
+                        'open_time' => $chunk->time,
+                        'ema' => $emaRange,
+                        'value' => $emaValue
+                    ];
+                }
 
+                $this->emaModel->insert($tmp);
+
+            });
+
+        }
         Log::info("Finished updating EMAs");
     }
 
