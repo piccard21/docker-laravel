@@ -513,8 +513,8 @@ class LakshmiService {
             }
 
             try {
-
                 Log::info("----------------------------------------");
+
                 // update symbols
                 $this->updateSymbolHistory($job->symbol, $job->timeframe);
 
@@ -545,7 +545,7 @@ class LakshmiService {
                 continue;
             }
 
-            Log::info("Lakshmi finished checking strategy for job $job->symbol $job->timeframe");
+            Log::info("Lakshmi finished checking strategy for job $job->id $job->symbol $job->timeframe");
         }
 
         // all done
