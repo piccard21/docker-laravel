@@ -13,8 +13,8 @@ class CreateJobLogsTable extends Migration {
     public function up() {
         Schema::create('job_logs', function(Blueprint $table) {
             $table->id();
-            $table->enum('method', ['CHECK', 'STRATEGY', 'BUY', 'SELL']);
-            $table->enum('type', ['ERROR', 'SUCCESS', 'WAITING', 'WARNING', 'INFO']);
+            $table->enum('method', ['BUY', 'SELL', 'WAITING', 'READY', 'ACTIVE', 'CHECK']);
+            $table->enum('type', ['ERROR', 'SUCCESS', 'WARNING', 'INFO']);
             $table->json('message');
             $table->dateTime('time');
             $table->bigInteger('job_id')->unsigned()->index();
