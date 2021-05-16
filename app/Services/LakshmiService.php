@@ -190,28 +190,27 @@ class LakshmiService {
      * @param string $timeframe
      * @return array
      */
-    //public function getSymbolHistory(string $symbol, string $timeframe, Carbon $from = null, Carbon $to = null) {
-    //    Log::debug("Getting symbol history of $symbol in timeframe $timeframe");
-    //
-    //    $symbolModel = Symbol::setCollection($symbol);
-    //
-    //    $result = $symbolModel->select('time', 'open', 'close', 'high', 'low')
-    //        ->where('symbol', $symbol)
-    //        ->where('timeframe', $timeframe)
-    //        ->when($from, function($query, $from) {
-    //            $query->where('time', '>=', intval($from->getPreciseTimestamp(3)));
-    //        })
-    //        ->when($to, function($query, $to) {
-    //            $query->where('close_time', '<=', intval($to->getPreciseTimestamp(3)));
-    //        })
-    //        ->orderBy('time', 'asc')
-    //        ->get()
-    //        ->toArray();
-    //
-    //    Log::debug("Successfully fetched symbol history of $symbol in timeframe $timeframe");
-    //
-    //    return $result;
-    //}
+    public function getSymbolHistory(string $symbol, string $timeframe, Carbon $from = null, Carbon $to = null) {
+        Log::debug("Getting symbol history of $symbol in timeframe $timeframe");
+
+        $symbolModel = Symbol::setCollection($symbol);
+
+        $result = $symbolModel->select('time', 'open', 'close', 'high', 'low')
+            ->where('symbol', $symbol)
+            ->where('timeframe', $timeframe)
+            ->when($from, function($query, $from) {
+                $query->where('time', '>=', intval($from->getPreciseTimestamp(3)));
+            })
+            ->when($to, function($query, $to) {
+                $query->where('close_time', '<=', intval($to->getPreciseTimestamp(3)));
+            })
+            ->orderBy('time', 'asc')
+            ->get();
+
+        Log::debug("Successfully fetched symbol history of $symbol in timeframe $timeframe");
+
+        return $result;
+    }
 
     /**
      * handy logging function

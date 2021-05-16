@@ -10,6 +10,7 @@ class JobLog extends Model
 {
     use HasFactory;
     protected $guarded = [];
+    protected $dates = ['time'];
     /**
      * The attributes that should be cast.
      * Only casted when the attribute is actually called

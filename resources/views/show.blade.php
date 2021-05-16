@@ -2,6 +2,17 @@
 
 @section('content')
     <div class="container">
+
+        {{--CHART--}}
+        @if($job->status === 'ACTIVE')
+            <div class="row justify-content-center">
+                <div class="col">
+                    <chart-component :chart-data="{{$chart}}"></chart-component>
+                </div>
+            </div>
+        @endif
+
+        {{--LOGS--}}
         <div class="row justify-content-center">
             <div class="col">
                 <div class="card">
@@ -24,7 +35,9 @@
                                     <td>{{ $log["id"] }}</td>
                                     <td>{{ $log["method"] }}</td>
                                     <td class="@if($log["type"] === 'SUCCESS') table-success @elseif ($log["type"] === 'INFO') table-primary @elseif ($log["type"] === 'WARNING') table-warning @else table-danger @endif">{{ $log["type"] }}</td>
-                                    <td>{{ $log["message"] }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-primary btn-sm">info</button>
+                                    </td>
                                     <td>{{ $log["time"] }}</td>
                                 </tr>
                             @endforeach
@@ -38,3 +51,7 @@
         </div>
     </div>
 @endsection
+
+@push('child-scripts')
+    <script src="{{ asset('js/job.js') }}" defer></script>
+@endpush

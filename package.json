@@ -26,6 +26,7 @@
     },
     "dependencies": {
         "bootstrap-vue": "^2.21.2",
+        "lightweight-charts": "^3.3.0",
         "moment": "^2.29.1",
         "vue-multiselect": "^2.1.6"
     }
