@@ -386,7 +386,7 @@ class LakshmiService {
                     $this->job->status = "READY";
 
                     $msg = "Status for job " . $this->job->id . " set to READY";
-                    $this->log($msg, 'STRATEGY', 'INFO');
+                    $this->log($msg, 'READY', 'INFO');
                 }
             } else if ($this->job->status === 'READY') {
                 Log::info("Status for job " . $this->job->id . " is READY");
@@ -396,7 +396,7 @@ class LakshmiService {
                     $this->job->status = "ACTIVE";
 
                     $msg = "Status for job " . $this->job->id . " set to ACTIVE";
-                    $this->log($msg, 'STRATEGY', 'INFO');
+                    $this->log($msg, 'ACTIVE', 'INFO');
                 } else {
                     $this->job->status = "READY";
                 }
@@ -414,7 +414,7 @@ class LakshmiService {
                     $this->job->status = "READY";
 
                     $msg = "job for " . $this->job->symbol . " set to status READY";
-                    $this->log($msg, 'STRATEGY', 'INFO');
+                    $this->log($msg, 'READY', 'INFO');
                 }
             } else if ($this->job->status === 'READY') {
                 if (!$strategyService->check()) {
@@ -422,7 +422,7 @@ class LakshmiService {
                     $this->job->status = "ACTIVE";
 
                     $msg = "job for " . $this->job->symbol . " set to status ACTIVE";
-                    $this->log($msg, 'STRATEGY', 'INFO');
+                    $this->log($msg, 'ACTIVE', 'INFO');
                 } else {
                     $this->job->status = "READY";
                 }
