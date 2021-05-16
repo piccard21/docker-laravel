@@ -25,11 +25,11 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         //$schedule->command('run-report')->weekly()->mondays()->at('12:00')->timezone('Pacific/Auckland');
-        //$schedule->command('lakshmi:updateExchangeInfo')->hourlyAt(21);
+        $schedule->command('lakshmi:updateExchangeInfo')->hourlyAt(21);
 
         // $schedule->command('inspire')->hourly();
         //$schedule->command('lakshmi:trade')->everyMinute();
-        //$schedule->command('lakshmi:trade')->everyFiveMinutes();
+        $schedule->command('lakshmi:trade')->everyFiveMinutes();
         //$schedule->command('lakshmi:trade')->hourly();
     }
 
