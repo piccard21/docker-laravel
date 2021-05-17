@@ -79,14 +79,14 @@ class HomeController extends Controller {
 
             $emaRaw = trader_ema($klines->pluck('close')->toArray(), $job->settings[$range]);
 
-            foreach (array_column($klinesArray, "time") as $timeKey => $time) {
-
-                if (array_key_exists($timeKey, $emaRaw)) {
-
-                    $emas[$range][] = [
-                        'time' => $time,
-                        'value' => $emaRaw[$timeKey]
-                    ];
+            if(is_array($emaRaw)) {
+                foreach (array_column($klinesArray, "time") as $timeKey => $time) {
+                    if (array_key_exists($timeKey, $emaRaw)) {
+                        $emas[$range][] = [
+                            'time' => $time,
+                            'value' => $emaRaw[$timeKey]
+                        ];
+                    }
                 }
             }
         }
