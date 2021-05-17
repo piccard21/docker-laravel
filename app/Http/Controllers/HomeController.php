@@ -64,8 +64,10 @@ class HomeController extends Controller {
         // logs
         $logs = $job->logs()->orderBy('id', 'desc')->get();
 
+
+
         // klines
-        $klines = $lakshmiService->getSymbolHistory($job->symbol, $job->timeframe, $job->created_at);
+        $klines = $lakshmiService->getSymbolHistory($job->symbol, $job->timeframe, $job->created_at->subHours($job->settings["ema2"]));
         foreach ($klines as &$kline) {
             $kline->time = intval($kline->time / 1000);
         }
