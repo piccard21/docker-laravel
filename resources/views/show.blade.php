@@ -23,8 +23,8 @@
                                 <th scope="col">#</th>
                                 <th scope="col">Method</th>
                                 <th scope="col">Type</th>
-                                <th scope="col">Message</th>
                                 <th scope="col">time</th>
+                                <th scope="col">Message</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -33,10 +33,10 @@
                                     <td>{{ $log["id"] }}</td>
                                     <td>{{ $log["method"] }}</td>
                                     <td class="@if($log["type"] === 'SUCCESS') table-success @elseif ($log["type"] === 'INFO') table-primary @elseif ($log["type"] === 'WARNING') table-warning @else table-danger @endif">{{ $log["type"] }}</td>
+                                    <td>{{ $log["time"] }}</td>
                                     <td>
                                         <button type="button" class="btn btn-primary btn-sm">info</button>
                                     </td>
-                                    <td>{{ $log["time"] }}</td>
                                 </tr>
                             @endforeach
 
