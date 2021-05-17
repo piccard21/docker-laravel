@@ -39,7 +39,7 @@
                                     <td>{{ $job["symbol"] }}</td>
                                     <td>{{ $job["timeframe"] }}</td>
                                     <td>{{ $job["settings"]["ema1"]}}/{{$job["settings"]["ema2"] }}</td>
-                                    <td class="@if($job["status"] === 'ACTIVE') table-success @elseif ($job["status"] === 'INACTIVE') table-danger @elseif ($job["status"] === 'READY') table-warning @endif">{{ $job["status"] }}</td>
+                                    <td class="@if($job["status"] === 'ACTIVE') table-success @elseif ($job["status"] === 'INACTIVE') table-danger @elseif ($job["status"] === 'READY') table-warning  @else table-primary @endif">{{ $job["status"] }}</td>
                                     <td>{{ $job["next"] }}</td>
                                     <td>{{ $job["lastTimeTriggered"] }}</td>
                                     <td>{{ $job["start_price"] }}</td>
