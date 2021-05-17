@@ -692,7 +692,9 @@ class LakshmiService {
         // TODO ... counter ... max 1000 loops?
         if(Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->isBefore(Carbon::now())) {
             Log::info("Current closing time is before now ... updating again!");
+            sleep(1);
             $this->updateSymbolHistory($symbol, $timeframe);
+            return;
         }
 
         // rename open_time to time
