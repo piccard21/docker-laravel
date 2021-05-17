@@ -675,13 +675,21 @@ class LakshmiService {
             if ($klinesNr === 1000) {
                 // get the last startTime and add a millisecond, so we won't get the same
                 $openTime = $klines[999]['open_time'] + 1;
-            } else {
+                $last = end($klines);
+            }
+            // in the last loop exactly 1000 where left, so we haven't got any result
+            elseif (!$klinesNr) {
+                // do nothing, we still have $last
+            }
+            // less than 1000
+            else {
                 $last = end($klines);
             }
         } while ($klinesNr === 1000);
 
 
         // check if candles actually updated
+        // TODO ... counter ... max 1000 loops?
         if(Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->isBefore(Carbon::now())) {
             Log::info("Current closing time is before now ... updating again!");
             $this->updateSymbolHistory($symbol, $timeframe);
@@ -696,7 +704,7 @@ class LakshmiService {
             ]);
 
         Log::info("Updated historcial data of $symbol with timeframe $timeframe");
-        Log::info("Current entry for $symbol/$timeframe:");
+        Log::info("Latest entry for $symbol/$timeframe:");
 
         $openTimeFormatted = Carbon::createFromTimestamp(intval($last["open_time"] / 1000))->format('Y-m-d H:i:s e');
         $closeTimeFormatted = Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->format('Y-m-d H:i:s e');
