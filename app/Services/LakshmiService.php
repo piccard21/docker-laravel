@@ -679,6 +679,13 @@ class LakshmiService {
             }
         } while ($klinesNr === 1000);
 
+
+        // check if candles actually updated
+        if(Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->isBefore(Carbon::now())) {
+            Log::info("Current closing time is before now ... updating again!");
+            $this->updateSymbolHistory($symbol, $timeframe);
+        }
+
         // rename open_time to time
         DB::connection('mongodb')
             ->collection($symbol)
