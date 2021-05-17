@@ -4,13 +4,11 @@
     <div class="container">
 
         {{--CHART--}}
-        @if($job->status === 'ACTIVE' || $job->status === 'INACTIVE')
             <div class="row justify-content-center">
                 <div class="col">
                     <chart-component :chart-data="{{$chart}}"></chart-component>
                 </div>
             </div>
-        @endif
 
         {{--LOGS--}}
         <div class="row justify-content-center">
