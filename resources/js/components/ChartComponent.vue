@@ -1,5 +1,10 @@
 <template>
-    <div id="chart" ref="chart"></div>
+    <div>
+        <div id="chart" ref="chart"></div>
+        <div class="my-3 d-flex justify-content-center">
+            <button type="button" class="btn btn-primary" @click="toggleKlines">Toggle Candles</button>
+        </div>
+    </div>
 </template>
 
 <script>
@@ -23,6 +28,12 @@ export default {
         this.initChart()
     },
     methods: {
+        toggleKlines() {
+            const options = this.candleSeries.options()
+            this.candleSeries.applyOptions({
+                visible: !options.visible,
+            });
+        },
         resize(width, height) {
             if (!width || !height) {
                 return
@@ -38,7 +49,9 @@ export default {
                 height: this.$refs.chart.innerHeight
             })
 
-            this.candleSeries = this.chart.addCandlestickSeries();
+            this.candleSeries = this.chart.addCandlestickSeries({
+                visible: true,
+            });
 
             this.lineSeriesEma1 = this.chart.addLineSeries({
                 lastValueVisible: false,

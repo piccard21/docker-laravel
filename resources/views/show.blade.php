@@ -4,7 +4,7 @@
     <div class="container">
 
         {{--CHART--}}
-        @if($job->status === 'ACTIVE')
+        @if($job->status === 'ACTIVE' || $job->status === 'INACTIVE')
             <div class="row justify-content-center">
                 <div class="col">
                     <chart-component :chart-data="{{$chart}}"></chart-component>
@@ -16,7 +16,7 @@
         <div class="row justify-content-center">
             <div class="col">
                 <div class="card">
-                    <div class="card-header">{{ $job->symbol  }} - {{ $job->timeframe }}</div>
+                    <div class="card-header">{{ $job->symbol  }} - {{ $job->timeframe }} - {{ $job->settings['ema1'] }}/{{ $job->settings['ema2'] }}</div>
 
                     <div class="card-body">
                         <table class="table">
