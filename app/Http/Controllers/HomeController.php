@@ -62,7 +62,7 @@ class HomeController extends Controller {
         $lakshmiService = app(LakshmiService::class);
 
         // logs
-        $logs = $job->logs()->orderBy('time', 'desc')->get();
+        $logs = $job->logs()->orderBy('id', 'desc')->get();
 
         // klines
         $klines = $lakshmiService->getSymbolHistory($job->symbol, $job->timeframe, $job->created_at);
