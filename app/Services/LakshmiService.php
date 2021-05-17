@@ -251,7 +251,8 @@ class LakshmiService {
 
         // not active yet OR no logs
         // TODO ... bottleneck ... beim Job anlegen sollte was eingetragen werden?
-        if (!JobLog::whereIn('method', ['BUY', 'SELL'])->where('type', 'SUCCESS')->count() ||
+        if (
+            !JobLog::where('job_id', $this->job->id)->whereIn('method', ['BUY', 'SELL'])->where('type', 'SUCCESS')->count() ||
             ($this->job->status !== 'ACTIVE' && $this->job->status !== 'INACTIVE')) {
             $this->availableAsset = [
                 "base" => 0,
