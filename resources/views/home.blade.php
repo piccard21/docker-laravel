@@ -24,7 +24,6 @@
                                 <th scope="col">Status</th>
                                 <th scope="col">Next</th>
                                 <th scope="col">LastTimeTriggered</th>
-                                <th scope="col">StartQuote</th>
                                 <th scope="col">Base</th>
                                 <th scope="col">Quote</th>
                                 <th scope="col">ROI</th>
@@ -42,7 +41,6 @@
                                     <td class="@if($job["status"] === 'ACTIVE') table-success @elseif ($job["status"] === 'INACTIVE') table-danger @elseif ($job["status"] === 'READY') table-warning  @else table-primary @endif">{{ $job["status"] }}</td>
                                     <td>{{ $job["next"] }}</td>
                                     <td>{{ $job["lastTimeTriggered"] }}</td>
-                                    <td>{{ $job["start_price"] }}</td>
                                     <td>{{ $job["base"] }}</td>
                                     <td>{{ $job["quote"] }}</td>
                                     <td class="@if($job["roi"] >= 0) table-success @else table-danger @endif">{{ $job["roi"] }}%</td>
