@@ -30,8 +30,9 @@ class Kernel extends ConsoleKernel
         // $schedule->command('inspire')->hourly();
         //$schedule->command('lakshmi:trade')->everyMinute();
         //$schedule->command('lakshmi:trade')->everyFiveMinutes();
-        $schedule->command('lakshmi:trade')->hourly();
-        //$schedule->command('lakshmi:trade')->hourlyAt(1);
+        //$schedule->command('lakshmi:trade')->hourly();
+        //$schedule->command('lakshmi:trade')->hourlyAt(1);everyFifteenMinutes
+        $schedule->command('lakshmi:trade')->everyFifteenMinutes();
     }
 
     /**

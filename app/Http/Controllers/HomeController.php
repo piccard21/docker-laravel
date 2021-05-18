@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\BinanceApiService;
 use App\Services\LakshmiService;
+use App\Services\StrategyEmaCrossService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Models\Job;
@@ -58,39 +59,30 @@ class HomeController extends Controller {
     }
 
     public function show(Request $request, int $id) {
-        $job = Job::find($id);
         $lakshmiService = app(LakshmiService::class);
+
+        $job =Job::find($id);
 
         // logs
         $logs = $job->logs()->orderBy('id', 'desc')->get();
 
-
-
         // klines
-        $klines = $lakshmiService->getSymbolHistory($job->symbol, $job->timeframe, $job->created_at->subHours($job->settings["ema2"]));
+        // TODO ... true für keine Millisekunden
+
+        $klines = $lakshmiService->getSymbolHistory(
+            $job->symbol,
+            $job->timeframe,
+            $lakshmiService->getFromForHistory($job->timeframe, $job->created_at, 1000)
+        );
+
         foreach ($klines as &$kline) {
             $kline->time = intval($kline->time / 1000);
         }
 
-        $klinesArray = $klines->toArray();
-
         // emas
         $emas = [];
         foreach (["ema1", "ema2"] as $range) {
-            $emas[$range] = [];
-
-            $emaRaw = trader_ema($klines->pluck('close')->toArray(), $job->settings[$range]);
-
-            if(is_array($emaRaw)) {
-                foreach (array_column($klinesArray, "time") as $timeKey => $time) {
-                    if (array_key_exists($timeKey, $emaRaw)) {
-                        $emas[$range][] = [
-                            'time' => $time,
-                            'value' => $emaRaw[$timeKey]
-                        ];
-                    }
-                }
-            }
+            $emas[$range] = StrategyEmaCrossService::getEma($klines, $job->settings[$range]);
         }
 
         // markers
@@ -116,7 +108,7 @@ class HomeController extends Controller {
         }
 
         $chartData = [
-            "klines" => $klinesArray,
+            "klines" => $klines->toArray(),
             "emas" => $emas,
             "markers" => $markers
         ];

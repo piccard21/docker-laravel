@@ -469,6 +469,21 @@ class LakshmiService {
         }
     }
 
+
+    public function getFromForHistory(string $timeframe, Carbon $from, $subtractSize) {
+        if (substr($timeframe, -1) === 'm') {
+            $from = $from->subMinutes($subtractSize);
+        } else if (substr($timeframe, -1) === 'h') {
+            $from = $from->subHours($subtractSize);
+        } else if (substr($timeframe, -1) === 'd') {
+            $from = $from->subDays($subtractSize);
+        } else if (substr($timeframe, -1) === 'w') {
+            $from = $from->subWeeks($subtractSize);
+        }
+
+        return $from;
+    }
+
     /**
      * this one has to be used by the cron job
      */
@@ -477,31 +492,6 @@ class LakshmiService {
         Log::info('===============================================================');
         Log::info('Starting Lakshmi trading...');
         Log::info('===============================================================');
-
-        // TODO lastTimeTriggered imemr von Anfang an setzen
-        // start_price in start_amouont umbenennen
-        //Job::insert([
-        //    "symbol" => "ETHUSDT",
-        //    "timeframe" => "4h",
-        //    "base" => "ETH",
-        //    "quote" => "USDT",
-        //    "strategy" => "App\Services\StrategyEmaCrossService",
-        //    "settings" => json_encode([
-        //        "ema1" => 2,
-        //        "ema2" => 3,
-        //    ]),
-        //    "status" => "ACTIVE",
-        //    "next" => "BUY",
-        //    "start_price" => 25,
-        //    "lastTimeTriggered" => intval(Carbon::now()->getPreciseTimestamp(3)),
-        //    "user_id" => 1
-        //]);
-
-        /**
-         * TODO
-         *  - wenn neuer Job, dann auch sofort prüfen ob man auf READY umschalten kann
-         * - hierfür eine gernerelle update-Methode des service, die public ist
-         */
 
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
             $this->job = $job;
@@ -513,13 +503,12 @@ class LakshmiService {
             }
 
             try {
-                Log::info("----------------------------------------");
-
                 // update symbols
                 $this->updateSymbolHistory($job->symbol, $job->timeframe);
 
                 // check if strategy can be triggered now
                 if (!$this->isJobOnTime()) {
+                    Log::info("----------------------------------------");
                     continue;
                 }
 
@@ -546,6 +535,7 @@ class LakshmiService {
             }
 
             Log::info("Lakshmi finished checking strategy for job $job->id $job->symbol $job->timeframe");
+            Log::info("----------------------------------------");
         }
 
         // all done
@@ -666,8 +656,7 @@ class LakshmiService {
                     } else {
                         $isExchangeUpToDate = true;
                     }
-                }
-                // already last candle, so nothing returned
+                } // already last candle, so nothing returned
                 else {
                     $isExchangeUpToDate = true;
                 }
