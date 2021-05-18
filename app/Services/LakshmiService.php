@@ -653,6 +653,27 @@ class LakshmiService {
         if ($lastEntry) {
             $openTime = $lastEntry->time;
             $closeTime = $lastEntry->close_time;
+
+            // check if candles from exchange have already been updated
+            $isExchangeUpToDate = false;
+            do {
+                $klinesUpToDate = $this->exchangeService->gethistoricaldata($symbol, $timeframe, $openTime + 1);
+
+                if (count($klinesUpToDate) > 0) {
+                    if (Carbon::createFromTimestamp(intval(end($klinesUpToDate)['close_time'] / 1000))->isBefore(Carbon::now())) {
+                        Log::info("===> Current closing time is before now ... updating again!");
+                        sleep(1);
+                    } else {
+                        $isExchangeUpToDate = true;
+                    }
+                }
+                // already last candle, so nothing returned
+                else {
+                    $isExchangeUpToDate = true;
+                }
+            } while (!$isExchangeUpToDate);
+
+            // exchange is up2date
             $lastEntry->delete();
 
             $openTimeFormatted = Carbon::createFromTimestamp(intval($openTime / 1000))->format('Y-m-d H:i:s e');
@@ -665,6 +686,7 @@ class LakshmiService {
         $last = null;
         do {
             $klines = $this->exchangeService->gethistoricaldata($symbol, $timeframe, $openTime);
+
             $klinesNr = count($klines);
 
             if ($klinesNr) {
@@ -676,25 +698,14 @@ class LakshmiService {
                 // get the last startTime and add a millisecond, so we won't get the same
                 $openTime = $klines[999]['open_time'] + 1;
                 $last = end($klines);
-            }
-            // in the last loop exactly 1000 where left, so we haven't got any result
-            elseif (!$klinesNr) {
+            } // in the last loop exactly 1000 where left, so we haven't got any result
+            else if (!$klinesNr) {
                 // do nothing, we still have $last
-            }
-            // less than 1000
+            } // less than 1000
             else {
                 $last = end($klines);
             }
         } while ($klinesNr === 1000);
-
-
-        // check if candles actually updated
-        if(Carbon::createFromTimestamp(intval($last["close_time"] / 1000))->isBefore(Carbon::now())) {
-            Log::info("Current closing time is before now ... updating again!");
-            sleep(1);
-            $this->updateSymbolHistory($symbol, $timeframe);
-            return;
-        }
 
         // rename open_time to time
         DB::connection('mongodb')
