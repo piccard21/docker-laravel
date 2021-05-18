@@ -661,7 +661,7 @@ class LakshmiService {
 
                 if (count($klinesUpToDate) > 0) {
                     if (Carbon::createFromTimestamp(intval(end($klinesUpToDate)['close_time'] / 1000))->isBefore(Carbon::now())) {
-                        Log::info("===> Current closing time is before now ... updating again!");
+                        Log::info("===> Current closing time is before now ... waiting!!!");
                         sleep(1);
                     } else {
                         $isExchangeUpToDate = true;
