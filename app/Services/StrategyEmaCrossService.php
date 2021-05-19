@@ -61,7 +61,8 @@ class StrategyEmaCrossService {
         );
 
         // get rid of the last one
-        $klines->pop();
+        // TODO ???? ab 22:40
+        //$klines->pop();
 
         foreach (["ema1" => $this->getEma1Setting(), "ema2" => $this->getEma2Setting()] as $key => $range) {
             $emas = self::getEma($klines, $range);
