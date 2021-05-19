@@ -119,7 +119,7 @@ class HomeController extends Controller {
         $chartData = [
             "klines" => $klines->toArray(),
             "emas" => $emas,
-            "markers" => $markers
+            "markers" => array_reverse($markers)    // set right order for lightweightchart, otherwise markers disappear
         ];
 
         return view('show', [
