@@ -46,9 +46,9 @@ class HomeController extends Controller {
                 ['type', 'SUCCESS'],
             ])->first();
 
-            if($firstBase) {
-                $tmp['firstBase'] = $firstBase->message['executedQty'];
-            }
+
+                $tmp['firstBase'] = $firstBase ? $firstBase->message['executedQty'] : '-';
+
 
 
             $tmp["lastTimeTriggered"] =
