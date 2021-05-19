@@ -39,17 +39,14 @@ class HomeController extends Controller {
             $tmp['base'] = $availableAsset['base'];
             $tmp['quote'] = $availableAsset['quote'];
 
-
+            //##############################################################
             // TEST
             $firstBase = $job->logs()->where([
                 ['method', 'BUY'],
                 ['type', 'SUCCESS'],
             ])->first();
-
-
-                $tmp['firstBase'] = $firstBase ? $firstBase->message['executedQty'] : '-';
-
-
+            $tmp['firstBase'] = $firstBase ? $firstBase->message['executedQty'] : '-';
+            //##############################################################
 
             $tmp["lastTimeTriggered"] =
                 Carbon::createFromTimestamp(intval($job["lastTimeTriggered"] / 1000))->format('Y-m-d H:i:s e');
@@ -73,7 +70,7 @@ class HomeController extends Controller {
     public function show(Request $request, int $id) {
         $lakshmiService = app(LakshmiService::class);
 
-        $job =Job::find($id);
+        $job = Job::find($id);
 
         // logs
         $logs = $job->logs()->orderBy('id', 'desc')->get();
