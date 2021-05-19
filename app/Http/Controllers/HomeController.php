@@ -39,6 +39,18 @@ class HomeController extends Controller {
             $tmp['base'] = $availableAsset['base'];
             $tmp['quote'] = $availableAsset['quote'];
 
+
+            // TEST
+            $firstBase = $job->logs()->where([
+                ['method', 'BUY'],
+                ['type', 'SUCCESS'],
+            ])->first();
+
+            if($firstBase) {
+                $tmp['firstBase'] = $firstBase->message['executedQty'];
+            }
+
+
             $tmp["lastTimeTriggered"] =
                 Carbon::createFromTimestamp(intval($job["lastTimeTriggered"] / 1000))->format('Y-m-d H:i:s e');
 
