@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\MessageBag;
+use function Psy\debug;
 
 class LakshmiService {
 
@@ -158,9 +159,15 @@ class LakshmiService {
 
         $symbolModel = Symbol::setCollection($this->job->symbol);
 
+        Log::debug("is job on time symbol: " . $this->job->symbol);
+        Log::debug("is job on time timeframe: " . $this->job->timeframe);
+        Log::debug("is job on time LAST_TIME_TRIGGERED: " .
+            Carbon::createFromTimestamp(intval($this->job->lastTimeTriggered / 1000))->format('Y-m-d H:i:s')
+        );
+
         $entry = $symbolModel->where([
-            ['symbol', '<=', $this->job->symbol],
-            ['timeframe', '<=', $this->job->timeframe],
+            ['symbol', $this->job->symbol],
+            ['timeframe', $this->job->timeframe],
             ['time', '<=', $this->job->lastTimeTriggered],
             ['close_time', '>=', $this->job->lastTimeTriggered]
         ])->first();
@@ -168,7 +175,15 @@ class LakshmiService {
         if (empty($entry)) {
             throw new \Exception("Cannot find symbol entry");
         }
+
         $closeTime = Carbon::createFromTimestamp($entry->close_time / 1000);
+
+        Log::debug("is job on time OPEN: " . Carbon::createFromTimestamp(intval($entry->time / 1000))->format('Y-m-d H:i:s'));
+        Log::debug("is job on time CLOSE: " . $closeTime->format('Y-m-d H:i:s'));
+        Log::debug("is job on time NOW: " . Carbon::now()->format('Y-m-d H:i:s'));
+        $isToTrigger = $closeTime->greaterThan(Carbon::now()) ? 'GROESSER' : 'KLEINER';
+        Log::debug("is job on time CHECK close gt now: " . $isToTrigger);
+
         if ($closeTime->greaterThan(Carbon::now())) {
             $lastEntryCloseTimeNice = Carbon::createFromTimestamp(intval($entry->close_time / 1000))
                 ->addSecond()
