@@ -56,7 +56,7 @@ class HomeController extends Controller {
             // ROI
             if ($job->next === "BUY") {
                 $tmp['roi']['quote'] = round((($availableAsset['quote'] * 100) / $tmp['start_price']) - 100, 2);
-                $tmp['roi']['base'] = "-";
+                $tmp['roi']['base'] = 0;
             } else {
                 $price = $binanceApiService->getCurrentPrice($job->symbol);
                 $tmp['roi']['quote'] = round((($availableAsset['base'] * $price['price'] * 100) / $tmp['start_price']) - 100, 2);
