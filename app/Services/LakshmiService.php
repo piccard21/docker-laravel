@@ -159,6 +159,8 @@ class LakshmiService {
         $symbolModel = Symbol::setCollection($this->job->symbol);
 
         $entry = $symbolModel->where([
+            ['symbol', '<=', $this->job->symbol],
+            ['timeframe', '<=', $this->job->timeframe],
             ['time', '<=', $this->job->lastTimeTriggered],
             ['close_time', '>=', $this->job->lastTimeTriggered]
         ])->first();
@@ -468,7 +470,6 @@ class LakshmiService {
             }
         }
     }
-
 
     public function getFromForHistory(string $timeframe, Carbon $from, $subtractSize) {
         if (substr($timeframe, -1) === 'm') {
