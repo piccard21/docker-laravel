@@ -237,7 +237,13 @@ class LakshmiService {
      */
     public function log($msg, $method, $type) {
 
-        if (!is_array($msg)) {
+        if ($type === 'SUCCESS') {
+            Log::info($msg);
+        } else if ($type === 'ERROR') {
+            Log::error($msg);
+        } else if ($type === 'WARNING') {
+            Log::warning($msg);
+        } else {
             Log::info($msg);
         }
 
@@ -546,7 +552,8 @@ class LakshmiService {
 
             } catch (\Exception $e) {
                 Log::error($e->getMessage());
-                Log::error("Trading for $job->symbol failed  ... continue with next job");
+                $msg = "Trading for $job->symbol failed  ... continue with next job";
+                $this->log($msg, $this->job->next, 'ERROR');
                 continue;
             }
 
