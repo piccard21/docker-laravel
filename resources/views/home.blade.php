@@ -23,12 +23,13 @@
                                 <th scope="col">EMA</th>
                                 <th scope="col">Status</th>
                                 <th scope="col">Next</th>
-                                <th scope="col">LastTimeTriggered</th>
-                                <th scope="col">Start Quote</th>
-                                <th scope="col">First Base</th>
-                                <th scope="col">Base</th>
+                                <th scope="col">Last</th>
+                                <th scope="col">1st Quote</th>
                                 <th scope="col">Quote</th>
-                                <th scope="col">ROI</th>
+                                <th scope="col">ROI Quote</th>
+                                <th scope="col">1st Base</th>
+                                <th scope="col">Base</th>
+                                <th scope="col">ROI Base</th>
                                 <th scope="col">Info</th>
                             </tr>
                             </thead>
@@ -44,10 +45,11 @@
                                     <td>{{ $job["next"] }}</td>
                                     <td>{{ $job["lastTimeTriggered"] }}</td>
                                     <td>{{ $job["start_price"] }}</td>
+                                    <td>{{ $job["quote"] }}</td>
+                                    <td class="@if($job["roi"]['quote'] > 0) table-success @elseif($job["roi"]['quote'] == 0) table-info  @else table-danger @endif">{{ $job["roi"]['quote'] }}%</td>
                                     <td>{{ $job["firstBase"]}}</td>
                                     <td>{{ $job["base"] }}</td>
-                                    <td>{{ $job["quote"] }}</td>
-                                    <td class="@if($job["roi"] > 0) table-success @elseif($job["roi"] == 0) table-info  @else table-danger @endif">{{ $job["roi"] }}%</td>
+                                    <td class="@if($job["roi"]['base'] > 0) table-success @elseif($job["roi"]['base'] == 0) table-info  @else table-danger @endif">{{ $job["roi"]['base'] }}%</td>
                                     <td><a href="{{route('job-info', $job['id'])}}" class="btn btn-primary btn-sm active">info</a></td>
                                 </tr>
                             @endforeach

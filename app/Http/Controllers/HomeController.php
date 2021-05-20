@@ -39,24 +39,31 @@ class HomeController extends Controller {
             $tmp['base'] = $availableAsset['base'];
             $tmp['quote'] = $availableAsset['quote'];
 
-            //##############################################################
-            // TEST
+            // 1st base
             $firstBase = $job->logs()->where([
                 ['method', 'BUY'],
                 ['type', 'SUCCESS'],
             ])->first();
             $tmp['firstBase'] = $firstBase ? $firstBase->message['executedQty'] : '-';
-            //##############################################################
 
+            // last time triggered
             $tmp["lastTimeTriggered"] =
                 Carbon::createFromTimestamp(intval($job["lastTimeTriggered"] / 1000))->format('Y-m-d H:i:s e');
 
+            // ROI
+            $tmp['roi'] = [];
+
+            // ROI
             if ($job->next === "BUY") {
-                $tmp['roi'] = round((($availableAsset['quote'] * 100) / $tmp['start_price']) - 100, 2);
+                $tmp['roi']['quote'] = round((($availableAsset['quote'] * 100) / $tmp['start_price']) - 100, 2);
+                $tmp['roi']['base'] = "-";
             } else {
                 $price = $binanceApiService->getCurrentPrice($job->symbol);
-                $tmp['roi'] = round((($availableAsset['base'] * $price['price'] * 100) / $tmp['start_price']) - 100, 2);
+                $tmp['roi']['quote'] = round((($availableAsset['base'] * $price['price'] * 100) / $tmp['start_price']) - 100, 2);
+                $tmp['roi']['base'] = round((($availableAsset['base'] * 100) / $tmp['firstBase'] ) - 100, 2);
             }
+
+
 
             $jobs[] = $tmp;
         }
