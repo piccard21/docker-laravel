@@ -158,13 +158,6 @@ class LakshmiService {
         // wenn ja auf WAITING/READY umstellen?
 
         $symbolModel = Symbol::setCollection($this->job->symbol);
-
-        Log::debug("is job on time symbol: " . $this->job->symbol);
-        Log::debug("is job on time timeframe: " . $this->job->timeframe);
-        Log::debug("is job on time LAST_TIME_TRIGGERED: " .
-            Carbon::createFromTimestamp(intval($this->job->lastTimeTriggered / 1000))->format('Y-m-d H:i:s')
-        );
-
         $entry = $symbolModel->where([
             ['symbol', $this->job->symbol],
             ['timeframe', $this->job->timeframe],
@@ -177,12 +170,6 @@ class LakshmiService {
         }
 
         $closeTime = Carbon::createFromTimestamp($entry->close_time / 1000);
-
-        Log::debug("is job on time OPEN: " . Carbon::createFromTimestamp(intval($entry->time / 1000))->format('Y-m-d H:i:s'));
-        Log::debug("is job on time CLOSE: " . $closeTime->format('Y-m-d H:i:s'));
-        Log::debug("is job on time NOW: " . Carbon::now()->format('Y-m-d H:i:s'));
-        $isToTrigger = $closeTime->greaterThan(Carbon::now()) ? 'GROESSER' : 'KLEINER';
-        Log::debug("is job on time CHECK close gt now: " . $isToTrigger);
 
         if ($closeTime->greaterThan(Carbon::now())) {
             $lastEntryCloseTimeNice = Carbon::createFromTimestamp(intval($entry->close_time / 1000))
@@ -522,7 +509,8 @@ class LakshmiService {
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
             $this->job = $job;
 
-            Log::info("Check Job $job->id: $job->symbol $job->timeframe EMA1: " . $job->settings["ema1"] . " / EMA2: " . $job->settings["ema2"]);
+            Log::info("Check Job $job->id: $job->symbol $job->timeframe EMA1: " . $job->settings["ema1"] . " / EMA2: " .
+                $job->settings["ema2"]);
 
             // set right credentials
             if (env('APP_ENV') === 'live') {
@@ -668,37 +656,54 @@ class LakshmiService {
             ->orderBy('time', 'desc')
             ->first();
 
+        $isSymbolAlreadyUpdated = false;
         $openTime = null;
         if ($lastEntry) {
             $openTime = $lastEntry->time;
             $closeTime = $lastEntry->close_time;
+            $openTimeFormatted = Carbon::createFromTimestamp(intval($openTime / 1000))->format('Y-m-d H:i:s e');
+            $closeTimeFormatted = Carbon::createFromTimestamp(intval($closeTime / 1000))->format('Y-m-d H:i:s e');
 
-            // check if candles from exchange have already been updated
-            $isExchangeUpToDate = false;
-            do {
-                $klinesUpToDate = $this->exchangeService->gethistoricaldata($symbol, $timeframe, $openTime + 1);
+            // last entry is older than now
+            if (Carbon::createFromTimestamp(intval($closeTime / 1000))->isBefore(Carbon::now())) {
 
-                if (count($klinesUpToDate) > 0) {
-                    if (Carbon::createFromTimestamp(intval(end($klinesUpToDate)['close_time'] / 1000))->isBefore(Carbon::now())) {
-                        Log::info("===> Current closing time is before now ... waiting!!!");
-                        sleep(1);
-                    } else {
+                // check if candles from exchange have already been updated
+                $isExchangeUpToDate = false;
+                do {
+                    $klinesUpToDate = $this->exchangeService->gethistoricaldata($symbol, $timeframe, $openTime + 1);
+
+                    if (count($klinesUpToDate) > 0) {
+                        if (Carbon::createFromTimestamp(intval(end($klinesUpToDate)['close_time'] / 1000))
+                            ->isBefore(Carbon::now())) {
+                            Log::info("===> Current closing time is before now ... waiting!!!");
+                            sleep(1);
+                        } else {
+                            $isExchangeUpToDate = true;
+                        }
+                    } // already last candle, so nothing returned
+                    else {
                         $isExchangeUpToDate = true;
                     }
-                } // already last candle, so nothing returned
-                else {
-                    $isExchangeUpToDate = true;
-                }
-            } while (!$isExchangeUpToDate);
+                } while (!$isExchangeUpToDate);
+            }
+            // symbol is already updated
+            else {
+                $isSymbolAlreadyUpdated = true;
+            }
+
+
+            if($isSymbolAlreadyUpdated) {
+                Log::info("Last entry for $symbol/$timeframe:");
+                Log::info("- open time: $openTimeFormatted ($openTime)");
+                Log::info("- close time: $closeTimeFormatted ($closeTime)");
+
+                return;
+            }
+
+            Log::info("Have to update ... going to delete last entry");
 
             // exchange is up2date
             $lastEntry->delete();
-
-            $openTimeFormatted = Carbon::createFromTimestamp(intval($openTime / 1000))->format('Y-m-d H:i:s e');
-            $closeTimeFormatted = Carbon::createFromTimestamp(intval($closeTime / 1000))->format('Y-m-d H:i:s e');
-            Log::info("Last entry for $symbol/$timeframe:");
-            Log::info("- open time: $openTimeFormatted ($openTime)");
-            Log::info("- close time: $closeTimeFormatted ($closeTime)");
         }
 
         $last = null;
