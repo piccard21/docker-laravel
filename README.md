@@ -15,11 +15,9 @@ cd lakshmi
 
 docker-compose up -d --build
 docker-compose exec php composer install
-```
 docker-compose run --rm node yarn install
 docker-compose run --rm node npm run prod
-docker-compose down -v
-docker-compose up -d --build
+```
 
 
 ## Bootstrap

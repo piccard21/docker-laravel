@@ -656,9 +656,9 @@ class LakshmiService {
             ->orderBy('time', 'desc')
             ->first();
 
-        $isSymbolAlreadyUpdated = false;
         $openTime = null;
         if ($lastEntry) {
+            $isSymbolAlreadyUpdated = false;
             $openTime = $lastEntry->time;
             $closeTime = $lastEntry->close_time;
             $openTimeFormatted = Carbon::createFromTimestamp(intval($openTime / 1000))->format('Y-m-d H:i:s e');
