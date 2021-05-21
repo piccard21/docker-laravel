@@ -301,7 +301,10 @@ class LakshmiService {
              */
 
             // get last job_log
-            $lastJob = $this->job->logs()->whereIn('method', ['BUY', 'SELL'])->orderBy('time', 'desc')->first();
+            $lastJob = $this->job->logs()
+                ->whereIn('method', ['BUY', 'SELL'])
+                ->where('type', 'SUCCESS')
+                ->orderBy('time', 'desc')->first();
 
             // should be also valid for inactive jobs
             if ($this->job->next === "BUY") {
@@ -531,10 +534,10 @@ class LakshmiService {
                 $this->updateSymbolHistory($job->symbol, $job->timeframe);
 
                 // check if strategy can be triggered now
-                if (!$this->isJobOnTime()) {
-                    Log::info("----------------------------------------");
-                    continue;
-                }
+                //if (!$this->isJobOnTime()) {
+                //    Log::info("----------------------------------------");
+                //    continue;
+                //}
 
                 // get available base & quote
                 $this->setAvailableAsset();
