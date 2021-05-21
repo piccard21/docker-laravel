@@ -518,6 +518,8 @@ class LakshmiService {
         foreach (Job::where('status', '<>', 'INACTIVE')->get() as $job) {
             $this->job = $job;
 
+            Log::info("Check Job $job->id: $job->symbol $job->timeframe EMA1: " . $job->settings["ema1"] . " / EMA2: " . $job->settings["ema2"]);
+
             // set right credentials
             if (env('APP_ENV') === 'live') {
                 $credentials = Credential::where('user_id', $job->user_id)->first();
