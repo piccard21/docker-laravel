@@ -668,6 +668,7 @@ class LakshmiService {
             if (Carbon::createFromTimestamp(intval($closeTime / 1000))->isBefore(Carbon::now())) {
 
                 // check if candles from exchange have already been updated
+                Log::info("Going to check if exchange sent klines which are up2date");
                 $isExchangeUpToDate = false;
                 do {
                     $klinesUpToDate = $this->exchangeService->gethistoricaldata($symbol, $timeframe, $openTime + 1);
