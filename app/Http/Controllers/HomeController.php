@@ -60,10 +60,8 @@ class HomeController extends Controller {
             } else {
                 $price = $binanceApiService->getCurrentPrice($job->symbol);
                 $tmp['roi']['quote'] = round((($availableAsset['base'] * $price['price'] * 100) / $tmp['start_price']) - 100, 2);
-                $tmp['roi']['base'] = round((($availableAsset['base'] * 100) / $tmp['firstBase'] ) - 100, 2);
+                $tmp['roi']['base'] = round((($availableAsset['base'] * 100) / $tmp['firstBase']) - 100, 2);
             }
-
-
 
             $jobs[] = $tmp;
         }
@@ -134,5 +132,9 @@ class HomeController extends Controller {
             "job" => $job,
             "logs" => $logs->toArray()
         ]);
+    }
+
+    public function create() {
+        return view('create', []);
     }
 }

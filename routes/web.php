@@ -35,6 +35,7 @@ Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 Route::get('/info/{id}', [App\Http\Controllers\HomeController::class, 'show'])->name('job-info');
+Route::get('/create', [App\Http\Controllers\HomeController::class, 'create'])->name('job-create');
 
 
 // backtest
