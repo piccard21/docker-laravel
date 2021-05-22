@@ -54,11 +54,11 @@ class HomeController extends Controller {
             $tmp['roi'] = [];
 
             // ROI
+            $price = $binanceApiService->getCurrentPrice($job->symbol);
             if ($job->next === "BUY") {
                 $tmp['roi']['quote'] = round((($availableAsset['quote'] * 100) / $tmp['start_price']) - 100, 2);
-                $tmp['roi']['base'] = 0;
+                $tmp['roi']['base'] = round(  (($availableAsset['quote'] * 100) / ($price['price']) / $tmp['firstBase']) -100, 2); //round(($availableAsset['base']  * 100/ $tmp['firstBase']) ,2);
             } else {
-                $price = $binanceApiService->getCurrentPrice($job->symbol);
                 $tmp['roi']['quote'] = round((($availableAsset['base'] * $price['price'] * 100) / $tmp['start_price']) - 100, 2);
                 $tmp['roi']['base'] = round((($availableAsset['base'] * 100) / $tmp['firstBase']) - 100, 2);
             }
